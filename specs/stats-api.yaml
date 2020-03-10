@@ -1,0 +1,73 @@
+openapi: '3.0'
+info:
+  title: iReceptorPlus Statistics API
+  version: 1.0.0
+  contact:
+    name: iReceptor Plus
+    url: 'https://www.ireceptor-plus.com'
+    email: info@ireceptor-plus.com
+  description: >
+    Analysis API for the iReceptor Plus platform.
+
+servers:
+  - url: https://vdjserver.org/irplus/v1/stats
+    description: Production server
+    variables:
+      basePath:
+        default: /irplus/v1/stats
+  - url: https://vdj-staging.tacc.utexas.edu/irplus/v1/stats
+    description: Staging server
+    variables:
+      basePath:
+        default: /irplus/v1/stats
+
+paths:
+  /:
+    get:
+      description: Service heartbeat.
+      operationId: get_service_status
+      responses:
+        '200':
+          description: Service is up.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  result:
+                    type: string
+
+  /rearrangement/count:
+    post:
+      description: Count of rearrangements for repertoire(s)
+      operationId: rearrangement_count
+      tags:
+        - rearrangements
+      requestBody:
+        content:
+          application/json:
+            schema:
+              properties:
+                token: 
+                  type: string
+                repertoires:
+                  nullable: true
+                  type: array
+                  items:
+                    type: string
+              required:
+                - token
+      responses:
+        '200':
+          description: A successful call returns an analysis id.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+        '401':
+          description: Not authorized.
+          content: 
+            'application/json': {}
