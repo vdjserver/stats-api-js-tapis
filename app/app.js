@@ -5,6 +5,7 @@
 // Application entry point
 //
 // VDJServer Community Data Portal
+// Statistics API service
 // http://vdjserver.org
 //
 // Copyright (C) 2020 The University of Texas Southwestern Medical Center
@@ -40,11 +41,11 @@ var app          = module.exports = express();
 var ServiceAccount = require('./models/serviceAccount');
 ServiceAccount.getToken()
     .then(function(serviceToken) {
-        console.log('IRPLUS-API INFO: Successfully acquired service token.');
+        console.log('VDJ-STATS-API INFO: Successfully acquired service token.');
     })
     .fail(function(error) {
-        console.error('IRPLUS-API ERROR: Service may need to be restarted.');
-        webhookIO.postToSlack('IRPLUS-API ERROR: Unable to login with service account.\nSystem may need to be restarted.\n' + error);
+        console.error('VDJ-STATS-API ERROR: Service may need to be restarted.');
+        webhookIO.postToSlack('VDJ-STATS-API ERROR: Unable to login with service account.\nSystem may need to be restarted.\n' + error);
         //process.exit(1);
     });
 

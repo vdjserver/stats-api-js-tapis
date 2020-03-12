@@ -22,16 +22,16 @@ RUN cp -rf /node-v8.10.0-linux-x64/share/* /usr/share
 
 COPY docker/scripts/start-service.sh /root/start-service.sh
 
-RUN mkdir /stats-api-js
+RUN mkdir /stats-api-js-tapis
 
 # Setup supervisor
 COPY docker/supervisor/supervisor.conf /etc/supervisor/conf.d/
 
 # Install npm dependencies (optimized for cache)
-COPY package.json /stats-api-js/
-RUN cd /stats-api-js && npm install
+COPY package.json /stats-api-js-tapis/
+RUN cd /stats-api-js-tapis && npm install
 
 # Copy project source
-COPY . /stats-api-js
+COPY . /stats-api-js-tapis
 
 CMD ["/root/start-service.sh"]

@@ -30,7 +30,7 @@ var config = {};
 module.exports = config;
 
 // General
-config.port = process.env.VDJ_API_PORT;
+config.port = process.env.STATS_API_PORT;
 
 // Error/debug reporting
 config.debug = process.env.DEBUG_CONSOLE;

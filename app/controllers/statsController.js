@@ -36,10 +36,6 @@ var tapisIO = require('../vendor/tapisIO');
 
 // Node Libraries
 var Q = require('q');
-var kue = require('kue');
-//var taskQueue = kue.createQueue({
-//    redis: app.redisConfig,
-//});
 
 var StatisticsController = {};
 module.exports = StatisticsController;
