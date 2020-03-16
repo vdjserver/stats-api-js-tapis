@@ -82,7 +82,7 @@ app.use(errorHandler({
 }));
 
 openapi.initialize({
-  apiDoc: fs.readFileSync(path.resolve(__dirname, '../specs/stats-api.yaml'), 'utf8'),
+  apiDoc: fs.readFileSync(path.resolve(__dirname, '../specifications/stats-api.yaml'), 'utf8'),
   app: app,
   promiseMode: true,
   consumesMiddleware: {
