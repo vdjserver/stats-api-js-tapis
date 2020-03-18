@@ -5,7 +5,8 @@
 // Tapis configuration settings
 //
 // VDJServer Community Data Portal
-// http://vdjserver.org
+// Statistics API service
+// https://vdjserver.org
 //
 // Copyright (C) 2020 The University of Texas Southwestern Medical Center
 //

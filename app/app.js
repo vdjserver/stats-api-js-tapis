@@ -6,7 +6,7 @@
 //
 // VDJServer Community Data Portal
 // Statistics API service
-// http://vdjserver.org
+// https://vdjserver.org
 //
 // Copyright (C) 2020 The University of Texas Southwestern Medical Center
 //
@@ -91,7 +91,8 @@ openapi.initialize({
   },
   operations: {
       get_service_status: apiResponseController.confirmUpStatus,
-      rearrangement_count: statsController.RearrangementCount
+      rearrangement_count: statsController.RearrangementCount,
+      clone_count: statsController.CloneCount
   }
 });
 

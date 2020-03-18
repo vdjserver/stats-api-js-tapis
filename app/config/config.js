@@ -5,7 +5,8 @@
 // Application configuration settings
 //
 // VDJServer Community Data Portal
-// http://vdjserver.org
+// Statistics API service
+// https://vdjserver.org
 //
 // Copyright (C) 2020 The University of Texas Southwestern Medical Center
 //
@@ -25,6 +26,10 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
+var path = require('path');
+var fs = require('fs');
+var yaml = require('js-yaml');
+
 var config = {};
 
 module.exports = config;
@@ -37,3 +42,23 @@ config.debug = process.env.DEBUG_CONSOLE;
 if (config.debug == 'true') config.debug = true;
 else if (config.debug == 1) config.debug = true;
 else config.debug = false;
+
+// get service info
+var packageFile = fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8');
+config.package = JSON.parse(packageFile);
+
+// get api info
+var apiFile = fs.readFileSync(path.resolve(__dirname, '../../specifications/stats-api.yaml'), 'utf8');
+config.api = yaml.safeLoad(apiFile);
+
+config.info = {
+    title: config.package.name,
+    description: config.package.description,
+    version: config.package.version,
+    contact: {
+        name: config.package.author[0].name,
+        email: config.package.author[0].email,
+        url: config.package.website.url
+    },
+    api: config.api.info
+};

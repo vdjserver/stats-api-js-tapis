@@ -5,7 +5,8 @@
 // Standard API responses
 //
 // VDJServer Community Data Portal
-// http://vdjserver.org
+// Statistics API service
+// https://vdjserver.org
 //
 // Copyright (C) 2020 The University of Texas Southwestern Medical Center
 //
@@ -35,8 +36,7 @@ module.exports = ApiResponseController;
 ApiResponseController.sendSuccess = function(successResultMessage, response) {
 
     var apiResponse = new ApiResponse();
-    apiResponse.setSuccess();
-    apiResponse.result = successResultMessage;
+    apiResponse.Result = successResultMessage;
 
     if (response) {
         response.status(200).send(apiResponse);
@@ -47,8 +47,7 @@ ApiResponseController.sendSuccess = function(successResultMessage, response) {
 ApiResponseController.sendError = function(errorMessage, errorCode, response) {
 
     var apiResponse = new ApiResponse();
-    apiResponse.setError();
-    apiResponse.message = errorMessage;
+    apiResponse.Message = errorMessage;
 
     if (response) {
         response.status(errorCode).send(apiResponse);
@@ -56,5 +55,5 @@ ApiResponseController.sendError = function(errorMessage, errorCode, response) {
 };
 
 ApiResponseController.confirmUpStatus = function(request, response) {
-    ApiResponseController.sendSuccess('', response);
+    ApiResponseController.sendSuccess('success', response);
 };

@@ -73,18 +73,26 @@ StatisticsController.RearrangementCount = async function(request, response) {
             console.log('list');
             var total_count = 0;
             var rearrangement_count = {};
+            var query = {};
             for (var i = 0; i < request.body.repertoires.length; ++i) {
-                console.log(request.body.repertoires[i]);
-                var result = await collection.countDocuments({"repertoire_id":request.body.repertoires[i]});
+                query['repertoire_id'] = request.body.repertoires[i];
+                console.log(query);
+                var result = await collection.countDocuments(query);
                 console.log(result);
                 rearrangement_count[request.body.repertoires[i]] = result;
                 total_count += result;
             }
-            apiResponseController.sendSuccess({"total_count":total_count,"rearrangement_count":rearrangement_count}, response);
+            apiResponseController.sendSuccess({"total_count":total_count,"counts":rearrangement_count}, response);
         }
     } catch (err) {
         console.error("VDJ-STATS-API ERROR: Could not connect to database");
         return apiResponseController.sendError("Internal Error", 500, response);
     }
     client.close();
+};
+
+StatisticsController.CloneCount = async function(request, response) {
+    if (config.debug) console.log("VDJ-STATS-API INFO: StatisticsController.CloneCount");
+
+    return apiResponseController.sendError("Not implemented", 500, response);
 };

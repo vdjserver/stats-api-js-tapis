@@ -5,7 +5,8 @@
 // Standard API responses
 //
 // VDJServer Community Data Portal
-// http://vdjserver.org
+// Statistics API service
+// https://vdjserver.org
 //
 // Copyright (C) 2020 The University of Texas Southwestern Medical Center
 //
@@ -25,22 +26,13 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
+// Server config
+var config = require('../config/config');
+
 var ApiResponse = {};
 
 ApiResponse.schema = function() {
-    this.message = '';
-    this.result  = '';
-    this.status  = '';
-};
-
-ApiResponse.schema.prototype.setSuccess = function() {
-    this.message = '';
-    this.status  = 'success';
-};
-
-ApiResponse.schema.prototype.setError = function() {
-    this.message = '';
-    this.status  = 'error';
+    this.Info = config.info;
 };
 
 module.exports = ApiResponse.schema;
