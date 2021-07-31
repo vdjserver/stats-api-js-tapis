@@ -265,18 +265,18 @@ tapisIO.sendCheckRequest = function(requestSettings, postData) {
             }
 
             if (responseObject && responseObject.status && responseObject.status.toLowerCase() === 'success') {
-		deferred.resolve(responseObject);
+                deferred.resolve(responseObject);
             } else {
-		if (responseObject.status.toLowerCase() === 'error' && response.statusCode == 404) {
-		    deferred.resolve(responseObject);
-		} else {
+                if (responseObject.status.toLowerCase() === 'error' && response.statusCode == 404) {
+                    deferred.resolve(responseObject);
+                } else {
                     if (tapisSettings.debugConsole === true) {
-			console.error('VDJ-STATS-API ERROR: Tapis returned an error. it is: ' + JSON.stringify(responseObject));
-			console.error('VDJ-STATS-API ERROR: Tapis returned an error. it is: ' + responseObject);
+                        console.error('VDJ-STATS-API ERROR: Tapis returned an error. it is: ' + JSON.stringify(responseObject));
+                        console.error('VDJ-STATS-API ERROR: Tapis returned an error. it is: ' + responseObject);
                     }
                     deferred.reject(new Error('Tapis response returned an error: ' + JSON.stringify(responseObject)));
-		}
-	    }	    
+                }
+            }       
         });
     });
 

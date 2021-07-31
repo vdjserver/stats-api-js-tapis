@@ -14,8 +14,7 @@ together.
 ```
 - Clone project and init submodules
 git clone http://bitbucket.org/vdjserver/stats-api-js-tapis.git
-cd web-backbone-v2-develop
-git checkout v2-develop
+cd stats-api-js-tapis
 git submodule update --init --recursive
 ```
 

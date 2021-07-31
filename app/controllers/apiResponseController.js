@@ -26,34 +26,35 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-// Models
-var ApiResponse = require('../models/apiResponse');
-
 var ApiResponseController = {};
 module.exports = ApiResponseController;
 
-// Sends a 200 response with a success message to the client
-ApiResponseController.sendSuccess = function(successResultMessage, response) {
+var config = require('../config/config');
+var webhookIO = require('../vendor/webhookIO');
 
-    var apiResponse = new ApiResponse();
-    apiResponse.Result = successResultMessage;
-
-    if (response) {
-        response.status(200).send(apiResponse);
-    }
-};
-
-// Sends a response with an error message to the client
-ApiResponseController.sendError = function(errorMessage, errorCode, response) {
-
-    var apiResponse = new ApiResponse();
-    apiResponse.Message = errorMessage;
-
-    if (response) {
-        response.status(errorCode).send(apiResponse);
-    }
-};
-
+// service status
 ApiResponseController.confirmUpStatus = function(request, response) {
-    ApiResponseController.sendSuccess('success', response);
-};
+    // Verify we can login with service account
+    var ServiceAccount = require('../models/serviceAccount');
+    ServiceAccount.getToken()
+        .then(function(token) {
+            response.status(200).json({"message":"success"});
+        })
+        .catch(function(error) {
+            var msg = 'VDJServer STATS API ERROR (confirmUpStatus): Could not acquire service token.\n.' + error;
+            response.status(500).json({"message":msg});
+            console.error(msg);
+            webhookIO.postToSlack(msg);
+        });
+}
+
+// service info
+ApiResponseController.getInfo = function(request, response) {
+    // Respond with service info
+    response.status(200).json(config.info);
+}
+
+// not implemented stub
+ApiResponseController.notImplemented = function(request, response) {
+    response.status(500).json({"message":"Not implemented."});
+}

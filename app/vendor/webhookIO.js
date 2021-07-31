@@ -1,14 +1,14 @@
 'use strict';
 
 //
-// apiResponse.js
-// Standard API responses
+// webhookIO.js
+// Post messages to Slack
 //
 // VDJServer Community Data Portal
 // Statistics API service
 // https://vdjserver.org
 //
-// Copyright (C) 2020 The University of Texas Southwestern Medical Center
+// Copyright (C) 2021 The University of Texas Southwestern Medical Center
 //
 // Author: Scott Christley <scott.christley@utsouthwestern.edu>
 //
@@ -26,13 +26,29 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-// Server config
-var config = require('../config/config');
+var moment = require('moment-timezone');
+var request = require('request');
 
-var ApiResponse = {};
+var webhookIO = {};
+module.exports = webhookIO;
 
-ApiResponse.schema = function() {
-    this.Info = config.info;
+webhookIO.postToSlack = function(eventMessage) {
+
+    if (!process.env.SLACK_WEBHOOK_URL) return;
+
+    request({
+        url: process.env.SLACK_WEBHOOK_URL,
+        json: {
+            text: 'Event: ' + eventMessage + '\n'
+                  + 'Environment: VDJServer STATS API\n'
+                  + 'Timestamp: ' + moment().tz('America/Chicago').format()
+                  ,
+            username: 'VDJ Telemetry Bot',
+        },
+        method: 'POST',
+    },
+    function(requestError, response, body) {
+        console.log('Posted slack webhook for message: "' + eventMessage + '"');
+    })
+    ;
 };
-
-module.exports = ApiResponse.schema;

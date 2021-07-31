@@ -26,37 +26,26 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
-// Express Modules
-var express      = require('express');
+var express = require('express');
 var errorHandler = require('errorhandler');
 var bodyParser   = require('body-parser');
-var openapi      = require('express-openapi');
-var _            = require('underscore');
+var openapi = require('express-openapi');
 var path = require('path');
 var fs = require('fs');
-var app          = module.exports = express();
+var yaml = require('js-yaml');
+var $RefParser = require("@apidevtools/json-schema-ref-parser");
 
+// Express app
+var app = module.exports = express();
 
-// Verify we can login to Tapis with service account
-var ServiceAccount = require('./models/serviceAccount');
-ServiceAccount.getToken()
-    .then(function(serviceToken) {
-        console.log('VDJ-STATS-API INFO: Successfully acquired service token.');
-    })
-    .fail(function(error) {
-        console.error('VDJ-STATS-API ERROR: Service may need to be restarted.');
-        webhookIO.postToSlack('VDJ-STATS-API ERROR: Unable to login with service account.\nSystem may need to be restarted.\n' + error);
-        //process.exit(1);
-    });
+// Server environment config
+var config = require('./config/config');
+//var airr = require('./api/helpers/airr-schema');
+var webhookIO = require('./vendor/webhookIO');
 
 // Controllers
 var apiResponseController = require('./controllers/apiResponseController');
 var statsController    = require('./controllers/statsController');
-
-// Server Options
-var config = require('./config/config');
-app.set('port', config.port);
-app.set('sslOptions', config.sslOptions);
 
 // CORS
 var allowCrossDomain = function(request, response, next) {
@@ -74,28 +63,71 @@ var allowCrossDomain = function(request, response, next) {
 };
 
 // Server Settings
+app.set('port', config.port);
 app.use(allowCrossDomain);
+// trust proxy so we can get client IP
+app.set('trust proxy', true);
 
 app.use(errorHandler({
     dumpExceptions: true,
     showStack: true,
 }));
 
-openapi.initialize({
-  apiDoc: fs.readFileSync(path.resolve(__dirname, '../specifications/stats-api.yaml'), 'utf8'),
-  app: app,
-  promiseMode: true,
-  consumesMiddleware: {
-    'application/json': bodyParser.json(),
-    'application/x-www-form-urlencoded': bodyParser.urlencoded({extended: true})
-  },
-  operations: {
-      get_service_status: apiResponseController.confirmUpStatus,
-      rearrangement_count: statsController.RearrangementCount,
-      clone_count: statsController.CloneCount
-  }
-});
 
-app.listen(app.get('port'), function() {
-    console.log('VDJ-STATS-API INFO: VDJServer Statistics API service listening on port ' + app.get('port'));
-});
+// Verify we can login with guest account
+var ServiceAccount = require('./models/serviceAccount');
+ServiceAccount.getToken()
+    .then(function(serviceToken) {
+        console.log('VDJ-STATS-API INFO: Successfully acquired service token.');
+
+        // Load API
+        var apiFile = path.resolve(__dirname, '../specifications/stats-api.yaml');
+        console.log('VDJ-STATS-API INFO: Using STATS API specification: ' + apiFile);
+        var api_spec = yaml.safeLoad(fs.readFileSync(apiFile, 'utf8'));
+        console.log('VDJ-STATS-API INFO: Loaded STATS API version: ' + api_spec.info.version);
+        //console.log(api_spec);
+
+        openapi.initialize({
+            apiDoc: api_spec,
+            app: app,
+            promiseMode: true,
+            errorMiddleware: function(err, req, res, next) {
+                console.log('Got an error!');
+                console.log(JSON.stringify(err));
+                console.trace("Here I am!");
+                res.status(500).json(err.errors);
+            },
+            consumesMiddleware: {
+                'application/json': bodyParser.json()
+                //'application/x-www-form-urlencoded': bodyParser.urlencoded({extended: true})
+            },
+            operations: {
+                get_service_status: apiResponseController.confirmUpStatus,
+                get_service_info: apiResponseController.getInfo,
+
+                rearrangement_count: statsController.RearrangementCount,
+                rearrangement_junction_length: apiResponseController.notImplemented,
+                rearrangement_gene_usage: apiResponseController.notImplemented,
+
+                clone_count: statsController.CloneCount,
+                clone_junction_length: apiResponseController.notImplemented,
+                clone_gene_usage: apiResponseController.notImplemented
+            }
+        });
+
+        // Start listening on port
+        return new Promise(function(resolve, reject) {
+            app.listen(app.get('port'), function() {
+                console.log('VDJ-STATS-API INFO: VDJServer STATS API (' + config.info.version + ') service listening on port ' + app.get('port'));
+                resolve();
+            });
+        });
+    })
+    .catch(function(error) {
+        var msg = 'VDJ-STATS-API ERROR: Service could not be start.\n' + error;
+        console.trace(msg);
+        webhookIO.postToSlack(msg);
+        // continue in case its a temporary error
+        //process.exit(1);
+    });
+
