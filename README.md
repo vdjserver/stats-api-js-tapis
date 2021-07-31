@@ -1,29 +1,21 @@
-# README #
+VDJServer Stats API
+===================
 
-This README would normally document whatever steps are necessary to get your application up and running.
+VDJServer implementation of the iReceptorPlus Stats API.
+JavaScript implementation for Tapis v3 metadata.
+Part of the VDJServer Repository.
 
-### What is this repository for? ###
+## Development Setup
 
-* Quick summary
-* Version
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
+Normally you do not build the docker image directly but instead use
+docker-compose at the higher-level to compose all the services
+together.
 
-### How do I get set up? ###
+```
+- Clone project and init submodules
+git clone http://bitbucket.org/vdjserver/stats-api-js-tapis.git
+cd web-backbone-v2-develop
+git checkout v2-develop
+git submodule update --init --recursive
+```
 
-* Summary of set up
-* Configuration
-* Dependencies
-* Database configuration
-* How to run tests
-* Deployment instructions
-
-### Contribution guidelines ###
-
-* Writing tests
-* Code review
-* Other guidelines
-
-### Who do I talk to? ###
-
-* Repo owner or admin
-* Other community or team contact
