@@ -34,6 +34,7 @@ var path = require('path');
 var fs = require('fs');
 var yaml = require('js-yaml');
 var $RefParser = require("@apidevtools/json-schema-ref-parser");
+var tapisIO = require('tapis-js');
 
 // Express app
 var app = module.exports = express();
@@ -75,7 +76,7 @@ app.use(errorHandler({
 
 
 // Verify we can login with guest account
-var ServiceAccount = require('./models/serviceAccount');
+var ServiceAccount = tapisIO.serviceAccount;
 ServiceAccount.getToken()
     .then(function(serviceToken) {
         console.log('VDJ-STATS-API INFO: Successfully acquired service token.');

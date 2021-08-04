@@ -30,8 +30,9 @@ RUN cp -rf /node-$NODE_VER-linux-x64/lib/* /usr/lib
 RUN cp -rf /node-$NODE_VER-linux-x64/include/* /usr/include
 RUN cp -rf /node-$NODE_VER-linux-x64/share/* /usr/share
 
+# Copy project source
 RUN mkdir /stats-api-js-tapis
-RUN mkdir /stats-api-js-tapis/app
+COPY . /stats-api-js-tapis
 
 # Install npm dependencies (optimized for cache)
 COPY package.json /stats-api-js-tapis
@@ -42,9 +43,6 @@ COPY docker/redis/redis.conf /etc/redis/redis.conf
 
 # Setup supervisor
 COPY docker/supervisor/supervisor.conf /etc/supervisor/conf.d/
-
-# Copy project source
-COPY . /stats-api-js-tapis
 
 # ESLint
 RUN cd /stats-api-js-tapis && npm run eslint app

@@ -26,33 +26,27 @@
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 //
 
+var StatisticsController = {};
+module.exports = StatisticsController;
+
 // Server config
 var config = require('../config/config');
-var mongoSettings = require('../config/mongoSettings');
+//var mongoSettings = require('../config/mongoSettings');
 
 // Controllers
 var apiResponseController = require('./apiResponseController');
 
-// Models
-var ServiceAccount = require('../models/serviceAccount');
-
 // Processing
-var tapisIO = require('../vendor/tapisIO');
+var tapisIO = require('tapis-js');
+var ServiceAccount = tapisIO.serviceAccount;
 
-// Node Libraries
-var Q = require('q');
-var MongoClient = require('mongodb').MongoClient;
-
-var url = 'mongodb://'
-    + mongoSettings.hostname + ':27017/' + mongoSettings.dbname;
-
-var StatisticsController = {};
-module.exports = StatisticsController;
-
+// rearrangement counts
 StatisticsController.RearrangementCount = async function(request, response) {
     if (config.debug) console.log("VDJ-STATS-API INFO: StatisticsController.RearrangementCount");
     console.log(request.body);
 
+    return apiResponseController.notImplemented(request, response);
+/*
     const client = new MongoClient(url);
     try {
         await client.connect();
@@ -88,11 +82,12 @@ StatisticsController.RearrangementCount = async function(request, response) {
         console.error("VDJ-STATS-API ERROR: Could not connect to database");
         return apiResponseController.sendError("Internal Error", 500, response);
     }
-    client.close();
+    client.close(); */
 };
 
+// clone counts
 StatisticsController.CloneCount = async function(request, response) {
     if (config.debug) console.log("VDJ-STATS-API INFO: StatisticsController.CloneCount");
 
-    return apiResponseController.sendError("Not implemented", 500, response);
+    return apiResponseController.notImplemented(request, response);
 };
