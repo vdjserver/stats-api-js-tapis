@@ -34,7 +34,7 @@ var path = require('path');
 var fs = require('fs');
 var yaml = require('js-yaml');
 var $RefParser = require("@apidevtools/json-schema-ref-parser");
-var tapisIO = require('tapis-js');
+var tapisIO = require('vdj-tapis-js');
 
 // Express app
 var app = module.exports = express();
@@ -47,6 +47,9 @@ var webhookIO = require('./vendor/webhookIO');
 // Controllers
 var apiResponseController = require('./controllers/apiResponseController');
 var statsController    = require('./controllers/statsController');
+
+// Queues
+var statisticsCacheQueue = require('./queues/cache-queue');
 
 // CORS
 var allowCrossDomain = function(request, response, next) {
@@ -88,8 +91,26 @@ ServiceAccount.getToken()
         console.log('VDJ-STATS-API INFO: Loaded STATS API version: ' + api_spec.info.version);
         //console.log(api_spec);
 
+        // Load internal notify API
+        var notifyFile = path.resolve(__dirname, 'swagger/stats-job-notify.yaml');
+        console.log('VDJ-STATS-API INFO: notify API specification: ' + notifyFile);
+        var notify_spec = yaml.safeLoad(fs.readFileSync(notifyFile, 'utf8'));
+        // copy paths
+        for (var p in notify_spec['paths']) {
+            api_spec['paths'][p] = notify_spec['paths'][p];
+        }
+
+        // dereference the API spec
+        //
+        // OPENAPI BUG: We should not have to do this, but openapi does not seem
+        // to recognize the nullable flags or the types with $ref
+        // https://github.com/kogosoftwarellc/open-api/issues/647
+        return $RefParser.dereference(api_spec);
+    })
+    .then(function(api_schema) {
+
         openapi.initialize({
-            apiDoc: api_spec,
+            apiDoc: api_schema,
             app: app,
             promiseMode: true,
             errorMiddleware: function(err, req, res, next) {
@@ -112,7 +133,9 @@ ServiceAccount.getToken()
 
                 clone_count: statsController.CloneCount,
                 clone_junction_length: apiResponseController.notImplemented,
-                clone_gene_usage: apiResponseController.notImplemented
+                clone_gene_usage: apiResponseController.notImplemented,
+
+                stats_notify: apiResponseController.notImplemented
             }
         });
 
@@ -123,6 +146,19 @@ ServiceAccount.getToken()
                 resolve();
             });
         });
+    })
+    .then(function() {
+        // Initialize queues
+
+        // Statistics cache
+        if (config.enable_cache) {
+            console.log('VDJ-STATS-API INFO: Statistics cache is enabled, triggering cache.');
+            statisticsCacheQueue.triggerCache();
+        } else {
+            console.log('VDJ-STATS-API INFO: Statistics cache is disabled.');
+            // TODO: clear queues
+        }
+
     })
     .catch(function(error) {
         var msg = 'VDJ-STATS-API ERROR: Service could not be start.\n' + error;

@@ -34,14 +34,42 @@ var config = {};
 
 module.exports = config;
 
+function parseBoolean(value)
+{
+    if (value == 'true') return true;
+    else if (value == 1) return true;
+    else return false;
+}
+
 // General
 config.port = process.env.STATS_API_PORT;
+config.enable_cache = parseBoolean(process.env.STATS_API_ENABLE_CACHE);
+config.statistics_app = process.env.STATS_TAPIS_APP
+config.name = 'VDJ-STATS-API';
+
+config.log = {};
+config.log.info = function(context, msg, ignore_debug = false) {
+    var date = new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' });
+    if (ignore_debug)
+        console.log(date, '-', config.name, 'INFO (' + context + '):', msg);
+    else
+        if (config.debug) console.log(date, '-', config.name, 'INFO (' + context + '):', msg);
+}
+
+config.log.error = function(context, msg) {
+    var date = new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' });
+    var full_msg = date + ' - ' + config.name + ' ERROR (' + context + '): ' + msg
+    console.error(full_msg);
+    return full_msg;
+}
+
+// AIRR Data Commons
+config.adcRepositoryEntry = process.env.ADC_REPOSITORY_ENTRY;
+if (! config.adcRepositoryEntry) config.adcRepositoryEntry = 'adc';
+console.log('VDJ-API INFO: adc_system_repositories entry =', config.adcRepositoryEntry);
 
 // Error/debug reporting
-config.debug = process.env.DEBUG_CONSOLE;
-if (config.debug == 'true') config.debug = true;
-else if (config.debug == 1) config.debug = true;
-else config.debug = false;
+config.debug = parseBoolean(process.env.DEBUG_CONSOLE);
 
 // get service info
 var packageFile = fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8');
