@@ -29,13 +29,17 @@
 var ApiResponseController = {};
 module.exports = ApiResponseController;
 
+// Server config
 var config = require('../config/config');
 var webhookIO = require('../vendor/webhookIO');
+
+// Processing
+var tapisIO = require('vdj-tapis-js');
+var ServiceAccount = tapisIO.serviceAccount;
 
 // service status
 ApiResponseController.confirmUpStatus = function(request, response) {
     // Verify we can login with service account
-    var ServiceAccount = require('../models/serviceAccount');
     ServiceAccount.getToken()
         .then(function(token) {
             response.status(200).json({"message":"success"});
