@@ -35,6 +35,7 @@ var fs = require('fs');
 var yaml = require('js-yaml');
 var $RefParser = require("@apidevtools/json-schema-ref-parser");
 var tapisIO = require('vdj-tapis-js');
+var authController = tapisIO.authController;
 
 // Express app
 var app = module.exports = express();
@@ -76,24 +77,43 @@ app.use(errorHandler({
     dumpExceptions: true,
     showStack: true,
 }));
+var context = 'app';
 
+// Downgrade to host vdj user
+// This is also so that the /vdjZ Corral file volume can be accessed,
+// as it is restricted to the TACC vdj account.
+// read/write access is required.
+config.log.info(context, 'Downgrading to host user: ' + config.hostServiceAccount, true);
+process.setgid(config.hostServiceGroup);
+process.setuid(config.hostServiceAccount);
+config.log.info(context, 'Current uid: ' + process.getuid(), true);
+config.log.info(context, 'Current gid: ' + process.getgid(), true);
 
-// Verify we can login with guest account
+var tapisSettings = tapisIO.tapisSettings;
+config.log.info(context, 'Using query collection: ' + tapisSettings.mongo_queryCollection, true);
+config.log.info(context, 'Using load collection: ' + tapisSettings.mongo_loadCollection, true);
+
+// Verify we can login with service and guest account
 var ServiceAccount = tapisIO.serviceAccount;
+var GuestAccount = tapisIO.guestAccount;
 ServiceAccount.getToken()
     .then(function(serviceToken) {
-        console.log('VDJ-STATS-API INFO: Successfully acquired service token.');
+        config.log.info(context, 'Successfully acquired service token.', true);
+        return GuestAccount.getToken();
+    })
+    .then(function(guestToken) {
+        config.log.info(context, 'Successfully acquired guest token.', true);
 
         // Load API
         var apiFile = path.resolve(__dirname, '../specifications/stats-api.yaml');
-        console.log('VDJ-STATS-API INFO: Using STATS API specification: ' + apiFile);
+        config.log.info(context, 'Using STATS API specification: ' + apiFile, true);
         var api_spec = yaml.safeLoad(fs.readFileSync(apiFile, 'utf8'));
-        console.log('VDJ-STATS-API INFO: Loaded STATS API version: ' + api_spec.info.version);
+        config.log.info(context, 'Loaded STATS API version: ' + api_spec.info.version, true);
         //console.log(api_spec);
 
-        // Load internal notify API
-        var notifyFile = path.resolve(__dirname, 'swagger/stats-job-notify.yaml');
-        console.log('VDJ-STATS-API INFO: notify API specification: ' + notifyFile);
+        // Load internal admin API
+        var notifyFile = path.resolve(__dirname, 'swagger/stats-admin.yaml');
+        config.log.info(context, 'Using ADMIN STATS API specification: ' + notifyFile, true);
         var notify_spec = yaml.safeLoad(fs.readFileSync(notifyFile, 'utf8'));
         // copy paths
         for (var p in notify_spec['paths']) {
@@ -123,6 +143,11 @@ ServiceAccount.getToken()
                 'application/json': bodyParser.json()
                 //'application/x-www-form-urlencoded': bodyParser.urlencoded({extended: true})
             },
+            securityHandlers: {
+                user_authorization: authController.userAuthorization,
+                admin_authorization: authController.adminAuthorization,
+                project_authorization: authController.projectAuthorization
+            },
             operations: {
                 get_service_status: apiResponseController.confirmUpStatus,
                 get_service_info: apiResponseController.getInfo,
@@ -135,6 +160,13 @@ ServiceAccount.getToken()
                 clone_junction_length: apiResponseController.notImplemented,
                 clone_gene_usage: apiResponseController.notImplemented,
 
+                get_stats_cache: statsController.getStatisticsCacheStatus,
+                update_stats_cache: statsController.updateStatisticsCacheStatus,
+                get_stats_cache_study: statsController.getStatisticsCacheStudyList,
+                update_stats_cache_study: statsController.updateStatisticsCacheForStudy,
+                delete_stats_cache_study: statsController.clearStudyCache,
+                update_stats_cache_repertoire: statsController.updateStatisticsCacheForRepertoire,
+                delete_stats_cache_repertoire: statsController.clearRepertoireCache,
                 stats_notify: apiResponseController.notImplemented
             }
         });
@@ -142,7 +174,7 @@ ServiceAccount.getToken()
         // Start listening on port
         return new Promise(function(resolve, reject) {
             app.listen(app.get('port'), function() {
-                console.log('VDJ-STATS-API INFO: VDJServer STATS API (' + config.info.version + ') service listening on port ' + app.get('port'));
+                config.log.info(context, 'VDJServer STATS API (' + config.info.version + ') service listening on port ' + app.get('port'), true);
                 resolve();
             });
         });
@@ -152,16 +184,16 @@ ServiceAccount.getToken()
 
         // Statistics cache
         if (config.enable_cache) {
-            console.log('VDJ-STATS-API INFO: Statistics cache is enabled, triggering cache.');
+            config.log.info(context, 'Statistics cache is enabled, triggering cache.', true);
             statisticsCacheQueue.triggerCache();
         } else {
-            console.log('VDJ-STATS-API INFO: Statistics cache is disabled.');
+            config.log.info(context, 'Statistics cache is disabled.', true);
             // TODO: clear queues
         }
 
     })
     .catch(function(error) {
-        var msg = 'VDJ-STATS-API ERROR: Service could not be start.\n' + error;
+        var msg = config.log.error(context, 'Service could not be start.\n' + error);
         console.trace(msg);
         webhookIO.postToSlack(msg);
         // continue in case its a temporary error

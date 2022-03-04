@@ -46,6 +46,7 @@ COPY docker/supervisor/supervisor.conf /etc/supervisor/conf.d/
 
 # ESLint
 RUN cd /stats-api-js-tapis && npm run eslint app
+RUN cd /stats-api-js-tapis && npm run eslint vdj-tapis-js
 
 # Install the local airr-standards
 #RUN cd /api-js-tapis/airr-standards/lang/python && python3 setup.py install

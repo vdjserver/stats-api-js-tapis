@@ -45,8 +45,17 @@ function parseBoolean(value)
 config.port = process.env.STATS_API_PORT;
 config.enable_cache = parseBoolean(process.env.STATS_API_ENABLE_CACHE);
 config.statistics_app = process.env.STATS_TAPIS_APP
+config.statistics_app_queue = process.env.STATS_TAPIS_APP_QUEUE
+config.statistics_max_jobs = process.env.STATS_MAX_JOBS
 config.name = 'VDJ-STATS-API';
 
+// Host user and group
+config.hostServiceAccount = process.env.HOST_SERVICE_ACCOUNT;
+config.hostServiceGroup = process.env.HOST_SERVICE_GROUP;
+config.vdjserver_data_path = process.env.VDJSERVER_DATA_PATH;
+config.lrqdata_path = process.env.LRQDATA_PATH;
+
+// standard info/error reporting
 config.log = {};
 config.log.info = function(context, msg, ignore_debug = false) {
     var date = new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' });

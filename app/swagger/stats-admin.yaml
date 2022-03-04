@@ -1,0 +1,175 @@
+paths:
+  /cache:
+    get:
+      description: get statistics cache status
+      operationId: get_stats_cache
+      tags:
+        - statistics
+      responses:
+        '200':
+          $ref: '#/components/responses/error_response'
+        default:
+          $ref: '#/components/responses/error_response'
+
+    post:
+      description: change statistics cache queue
+      operationId: update_stats_cache
+      tags:
+        - statistics
+      security:
+        - admin_authorization: []
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - operation
+              properties:
+                operation:
+                  type: string
+                  enum:
+                    - enable
+                    - disable
+                    - trigger
+      responses:
+        '200':
+          $ref: '#/components/responses/error_response'
+        default:
+          $ref: '#/components/responses/error_response'
+
+  /cache/study:
+    get:
+      description: get statistics cache study entries
+      operationId: get_stats_cache_study
+      tags:
+        - statistics
+      responses:
+        '200':
+          $ref: '#/components/responses/error_response'
+        default:
+          $ref: '#/components/responses/error_response'
+
+  /cache/study/{cache_uuid}:
+    post:
+      description: update cache settings for study
+      operationId: update_stats_cache_study
+      tags:
+        - statistics
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: cache_uuid
+          in: path
+          description: cache identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - should_cache
+              properties:
+                should_cache:
+                  type: boolean
+      responses:
+        '200':
+          $ref: '#/components/responses/error_response'
+        default:
+          $ref: '#/components/responses/error_response'
+
+    delete:
+      description: delete cache for study
+      operationId: delete_stats_cache_study
+      tags:
+        - ADC
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: cache_uuid
+          in: path
+          description: cache identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/error_response'
+        default:
+          $ref: '#/components/responses/error_response'
+
+  /cache/repertoire/{repertoire_id}:
+    post:
+      description: update cache settings for repertoire
+      operationId: update_stats_cache_repertoire
+      tags:
+        - statistics
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: repertoire_id
+          in: path
+          description: repertoire identifer
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          'application/json':
+            schema:
+              required:
+                - should_cache
+              properties:
+                should_cache:
+                  type: boolean
+      responses:
+        '200':
+          $ref: '#/components/responses/error_response'
+        default:
+          $ref: '#/components/responses/error_response'
+
+    delete:
+      description: delete cache for repertoire
+      operationId: delete_stats_cache_repertoire
+      tags:
+        - statistics
+      security:
+        - admin_authorization: []
+      parameters:
+        - name: repertoire_id
+          in: path
+          description: repertoire identifer
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/error_response'
+        default:
+          $ref: '#/components/responses/error_response'
+
+  /cache/notify/{notify_id}:
+    post:
+      description: >
+        Receive notifications for statistics jobs.
+      operationId: stats_notify
+      tags:
+        - statistics
+      parameters:
+        - name: notify_id
+          in: path
+          description: ID of notification
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          $ref: '#/components/responses/error_response'
+        default:
+          $ref: '#/components/responses/error_response'
