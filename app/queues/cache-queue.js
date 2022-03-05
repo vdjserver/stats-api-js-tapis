@@ -423,66 +423,9 @@ CacheQueue.pollJobs = async function() {
                 + job_entry['status'] + ' for statistics cache repertoires entry: '
                 + entry['uuid'], true);
 
-            // TODO: trigger notification for finished jobs
-            if (job_entry['status'] == 'FINISHED') {
-                CacheQueue.finishStatistics(entry['value']['repository_id'], entry['value']['study_id'], entry['value']['repertoire_id']);
-            } else if (job_entry['status'] == 'FAILED') {
-                // TODO: handle failed jobs
-                msg = config.log.error(context, 'Statistics job failed: ' + job_entry['id']
-                    + ' for statistics cache repertoires entry: ' + entry['uuid']);
-                webhookIO.postToSlack(msg);
-                msg = null;
-
-                if (job_entry['lastStatusMessage'].indexOf('TIMEOUT') >= 0) {
-                    // check if exceeded time and rerun
-                    if (job_entry['maxHours'] >= 48) {
-                        msg = config.log.error(context, 'Statistics job: ' + job_entry['id']
-                            + ' already ran for 48 hours, disabling statistics');
-                        webhookIO.postToSlack(msg);
-                        msg = null;
-
-                        entry['value']['should_cache'] = false;
-                        entry['value']['statistics_job_id'] = null;
-                        await tapisIO.updateMetadata(entry['uuid'], entry['name'], entry['value'], null)
-                            .catch(function(error) {
-                                msg = config.log.error(context, 'error' + error);
-                            });
-                        if (msg) {
-                            webhookIO.postToSlack(msg);
-                        }
-                    } else {
-                        // increase the time multiplier
-                        var timeMultiplier = entry['value']['timeMultiplier'];
-                        if (! timeMultiplier) timeMultiplier = 1;
-                        timeMultiplier *= 2;
-
-                        msg = config.log.error(context, 'Retry statistics job with time multiplier: ' + timeMultiplier);
-                        webhookIO.postToSlack(msg);
-                        msg = null;
-
-                        entry['value']['timeMultiplier'] = timeMultiplier;
-                        entry['value']['statistics_job_id'] = null;
-                        await tapisIO.updateMetadata(entry['uuid'], entry['name'], entry['value'], null)
-                            .catch(function(error) {
-                                msg = config.log.error(context, 'error' + error);
-                            });
-                        if (msg) {
-                            webhookIO.postToSlack(msg);
-                        }
-                    }
-                } else {
-                    // failed for some other reason so disable
-                    entry['value']['should_cache'] = false;
-                    entry['value']['statistics_job_id'] = null;
-                    await tapisIO.updateMetadata(entry['uuid'], entry['name'], entry['value'], null)
-                        .catch(function(error) {
-                            msg = config.log.error(context, 'error' + error);
-                        });
-                    if (msg) {
-                        webhookIO.postToSlack(msg);
-                    }
-                }
-            }
+            // call directly instead of posting notification
+            if ((job_entry['status'] == 'FINISHED') || (job_entry['status'] == 'FAILED'))
+                CacheQueue.finishStatistics(entry['uuid']);
         }
     }
 
@@ -690,39 +633,39 @@ jobQueue.process(async (job) => {
 // After job has calculated the statistics for a repertoire, save them
 // and mark as cached.
 //
-CacheQueue.finishStatistics = function(repository_id, study_id, repertoire_id) {
+CacheQueue.finishStatistics = function(cache_uuid) {
     var context = 'CacheQueue.finishStatistics';
     config.log.info(context, 'received');
-    finishQueue.add({ repository_id:repository_id, study_id:study_id, repertoire_id:repertoire_id });
+    finishQueue.add({ cache_uuid:cache_uuid });
 }
 
 finishQueue.process(async (job) => {
     var context = 'finishQueue';
     var msg = null;
+    var cache_uuid = job['data']['cache_uuid'];
     var collection = 'statistics' + tapisSettings.mongo_queryCollection;
-
-    var repository_id = job['data']['repository_id'];
-    var study_id = job['data']['study_id'];
-    var repertoire_id = job['data']['repertoire_id'];
 
     config.log.info(context, 'start');
 
-    // get statistics cache repertoire entry
-    let stats_entries = await tapisIO.getStatisticsCacheRepertoireMetadata(repository_id, study_id, repertoire_id)
+    // get cache entry
+    var entry = await tapisIO.getMetadata(cache_uuid)
         .catch(function(error) {
-            msg = config.log.error(context, 'error' + error);
+            msg = config.log.error(context, 'Could not get cache id: ' + cache_uuid + ', error: ' + error);
         });
     if (msg) {
         webhookIO.postToSlack(msg);
         return Promise.resolve();
     }
 
-    if (!stats_entries || stats_entries.length != 1) {
-        msg = config.log.error(context, 'Incorrect number (!= 1) of statistics cache repertoire entries for repertoire: ' + repertoire_id);
+    if (! entry) {
+        msg = config.log.error(context, 'could not retrieve cache entry: ' + cache_uuid);
         webhookIO.postToSlack(msg);
         return Promise.resolve();
     }
-    let entry = stats_entries[0];
+
+    var repository_id = entry['value']['repository_id'];
+    var study_id = entry['value']['study_id'];
+    var repertoire_id = entry['value']['repertoire_id'];
 
     // get the statistics cache study entry
     var stats_studies = await tapisIO.getStatisticsCacheStudyMetadata(repository_id, study_id)
@@ -757,11 +700,73 @@ finishQueue.process(async (job) => {
         return Promise.resolve();
     }
 
-    if (job_entry['status'] != 'FINISHED') {
+    // only care about the end states
+    if ((job_entry['status'] != 'FINISHED') && (job_entry['status'] != 'FAILED')) {
         msg = config.log.error(context, 'Invalid job status (' + job_entry['status'] +') for statistics cache repertoire entry, abort finish: ' + entry['uuid']);
         webhookIO.postToSlack(msg);
         return Promise.resolve();
     }
+
+    // if failed, see if recoverable
+    if (job_entry['status'] == 'FAILED') {
+        msg = config.log.error(context, 'Statistics job failed: ' + job_entry['id']
+            + ' for statistics cache repertoires entry: ' + entry['uuid']);
+        webhookIO.postToSlack(msg);
+        msg = null;
+
+        if (job_entry['lastStatusMessage'].indexOf('TIMEOUT') >= 0) {
+            // check if exceeded time and rerun
+            if (job_entry['maxHours'] >= 48) {
+                msg = config.log.error(context, 'Statistics job: ' + job_entry['id']
+                    + ' already ran for 48 hours, disabling statistics');
+                webhookIO.postToSlack(msg);
+                msg = null;
+
+                entry['value']['should_cache'] = false;
+                entry['value']['statistics_job_id'] = null;
+                await tapisIO.updateMetadata(entry['uuid'], entry['name'], entry['value'], null)
+                    .catch(function(error) {
+                        msg = config.log.error(context, 'error' + error);
+                    });
+                if (msg) {
+                    webhookIO.postToSlack(msg);
+                }
+            } else {
+                // increase the time multiplier
+                var timeMultiplier = entry['value']['timeMultiplier'];
+                if (! timeMultiplier) timeMultiplier = 1;
+                timeMultiplier *= 2;
+
+                msg = config.log.error(context, 'Retry statistics job with time multiplier: ' + timeMultiplier);
+                webhookIO.postToSlack(msg);
+                msg = null;
+
+                entry['value']['timeMultiplier'] = timeMultiplier;
+                entry['value']['statistics_job_id'] = null;
+                await tapisIO.updateMetadata(entry['uuid'], entry['name'], entry['value'], null)
+                    .catch(function(error) {
+                        msg = config.log.error(context, 'error' + error);
+                    });
+                if (msg) {
+                    webhookIO.postToSlack(msg);
+                }
+            }
+        } else {
+            // failed for some other reason so disable
+            entry['value']['should_cache'] = false;
+            entry['value']['statistics_job_id'] = null;
+            await tapisIO.updateMetadata(entry['uuid'], entry['name'], entry['value'], null)
+                .catch(function(error) {
+                    msg = config.log.error(context, 'error' + error);
+                });
+            if (msg) {
+                webhookIO.postToSlack(msg);
+            }
+        }
+        return Promise.resolve();
+    }
+
+    // should only get to here for a FINISHED job
 
     // get the rearrangement statistics
     let cache_path = '/community/cache/' + download_cache_id + '/statistics/' + repertoire_id + '/rearrangement_statistics.json';
