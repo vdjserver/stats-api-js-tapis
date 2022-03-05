@@ -79,7 +79,7 @@ CacheQueue.triggerCache = async function() {
         // TODO: delete any existing cache jobs
         CacheQueue.clearQueues();
         webhookIO.postToSlack(msg);
-        return Promise.reject(new Error(msg));
+        return Promise.resolve();
     }
 
     var stats_cache = await tapisIO.getStatisticsCache()
@@ -88,7 +88,7 @@ CacheQueue.triggerCache = async function() {
         });
     if (msg) {
         webhookIO.postToSlack(msg);
-        return;
+        return Promise.resolve();
     }
 
     // create entry if doesn't exist
@@ -102,7 +102,7 @@ CacheQueue.triggerCache = async function() {
             });
         if (msg) {
             webhookIO.postToSlack(msg);
-            return;
+            return Promise.resolve();
         }
     } else {
         stats_cache = stats_cache[0];
@@ -113,26 +113,27 @@ CacheQueue.triggerCache = async function() {
     if (! stats_cache['value']['enable_cache']) {
         config.log.info(context, 'Statistics cache is not enabled', true);
         CacheQueue.clearQueues();
-        return;
+        return Promise.resolve();
     }
 
     // trigger the create queue
     config.log.info(context, 'cache enabled, creating queue jobs', true);
 
     // submit to check every 3600secs/1hour
-    //triggerQueue.add({stats_cache: stats_cache}, { repeat: { every: 3600000 }});
+    triggerQueue.add({stats_cache: stats_cache}, { repeat: { every: 3600000 }});
 
     // testing, every 2 mins
-    triggerQueue.add({stats_cache: stats_cache}, { repeat: { every: 120000 }});
+    //triggerQueue.add({stats_cache: stats_cache}, { repeat: { every: 120000 }});
 
     // trigger the job queue
     // submit to check every 3600secs/1hour
     //checkQueue.add({stats_cache: stats_cache}, { repeat: { every: 3600000 }});
 
-    // testing, every 2 mins
-    checkQueue.add({stats_cache: stats_cache}, { repeat: { every: 120000 }});
+    // testing, every 10 mins
+    checkQueue.add({stats_cache: stats_cache}, { repeat: { every: 600000 }});
 
     config.log.info(context, 'end');
+    return Promise.resolve();
 }
 
 // this should run periodically
@@ -527,7 +528,7 @@ checkQueue.process(async (job) => {
 
 // create job data
 CacheQueue.createJob = function(uuid, download_cache_id, repertoire_id, maxHours) {
-    var context = 'CacheQueue.pollJobs';
+    var context = 'CacheQueue.createJob';
     var msg = null;
     var tapis_path = 'agave://' + tapisSettings.storageSystem + '//community/cache/';
 
@@ -601,7 +602,7 @@ jobQueue.process(async (job) => {
             });
         if (msg) {
             webhookIO.postToSlack(msg);
-            return;
+            return Promise.resolve();
         }
 
         // submit jobs
@@ -676,7 +677,7 @@ jobQueue.process(async (job) => {
                 });
             if (msg) {
                 webhookIO.postToSlack(msg);
-                return;
+                return Promise.resolve();
             }
         }
     }
@@ -698,6 +699,7 @@ CacheQueue.finishStatistics = function(repository_id, study_id, repertoire_id) {
 finishQueue.process(async (job) => {
     var context = 'finishQueue';
     var msg = null;
+    var collection = 'statistics' + tapisSettings.mongo_queryCollection;
 
     var repository_id = job['data']['repository_id'];
     var study_id = job['data']['study_id'];
@@ -771,12 +773,28 @@ finishQueue.process(async (job) => {
         webhookIO.postToSlack(msg);
         return Promise.resolve();
     }
+    //console.log(stats_data);
+
+    if (! stats_data) {
+        // if file is not found, must have been some error in the job, needs manual intervention
+        // so disable caching for this repertoire
+        msg = config.log.error(context, 'rearrangement_statistics.json file not found for cache_uuid: ' + entry['uuid']
+                              + ', likely an error within job: ' + entry['value']['statistics_job_id']
+                              + ', disabling statistics cache for repertoire');
+        webhookIO.postToSlack(msg);
+
+        entry['value']['should_cache'] = false;
+        await tapisIO.updateMetadata(entry['uuid'], entry['name'], entry['value'], null)
+            .catch(function(error) {
+                msg = config.log.error(context, 'error' + error);
+                webhookIO.postToSlack(msg);
+            });
+        return Promise.resolve();
+    }
 
     // verify it is valid JSON
-    //console.log(stats_data);
     let data = null;
     try {
-        var collection = 'statistics' + tapisSettings.mongo_queryCollection;
         data = JSON.parse(stats_data);
         if (! data)
             msg = config.log.error(context, 'Empty rearrangement statistics JSON for cache_uuid: ' + entry['uuid']);
@@ -785,6 +803,23 @@ finishQueue.process(async (job) => {
     }
     if (msg) {
         webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    if (! data) {
+        // if invalid JSON, must have been some error in the job, needs manual intervention
+        // so disable caching for this repertoire
+        msg = config.log.error(context, 'Invalid rearrangement statistics JSON for cache_uuid: ' + entry['uuid']
+                              + ', likely an error within job: ' + entry['value']['statistics_job_id']
+                              + ', disabling statistics cache for repertoire');
+        webhookIO.postToSlack(msg);
+
+        entry['value']['should_cache'] = false;
+        await tapisIO.updateMetadata(entry['uuid'], entry['name'], entry['value'], null)
+            .catch(function(error) {
+                msg = config.log.error(context, 'error' + error);
+                webhookIO.postToSlack(msg);
+            });
         return Promise.resolve();
     }
 
@@ -806,7 +841,7 @@ finishQueue.process(async (job) => {
         });
     if (msg) {
         webhookIO.postToSlack(msg);
-        return;
+        return Promise.resolve();
     }
 
     config.log.info(context, 'end');
@@ -887,7 +922,6 @@ clearQueue.process(async (job) => {
             msg = config.log.error(context, 'error' + error);
         });
     if (msg) {
-        console.error(msg);
         webhookIO.postToSlack(msg);
         return Promise.resolve();
     }
@@ -937,7 +971,6 @@ clearQueue.process(async (job) => {
                 msg = config.log.error(context, 'tapisIO.deleteMetadata: ' + entry['uuid'] + ', error ' + error);
             });
         if (msg) {
-            console.error(msg);
             webhookIO.postToSlack(msg);
             return Promise.resolve();
         }
@@ -950,7 +983,7 @@ clearQueue.process(async (job) => {
             });
         if (msg) {
             webhookIO.postToSlack(msg);
-            return;
+            return Promise.resolve();
         }
     } else {
         // clearing for one or more studies
@@ -989,7 +1022,6 @@ clearQueue.process(async (job) => {
                     msg = config.log.error(context, 'tapisIO.deleteMetadata: ' + entry['uuid'] + ', error ' + error);
                 });
             if (msg) {
-                console.error(msg);
                 webhookIO.postToSlack(msg);
                 return Promise.resolve();
             }
@@ -1005,7 +1037,7 @@ clearQueue.process(async (job) => {
                 });
             if (msg) {
                 webhookIO.postToSlack(msg);
-                return;
+                return Promise.resolve();
             }
         }
     }
