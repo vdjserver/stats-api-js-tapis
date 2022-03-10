@@ -149,7 +149,7 @@ paths:
         default:
           $ref: '#/components/responses/error_response'
 
-  /cache/notify/{notify_id}:
+  /cache/notify/{cache_uuid}:
     post:
       description: >
         Receive notifications for statistics jobs.
@@ -157,17 +157,30 @@ paths:
       tags:
         - statistics
       parameters:
-        - name: notify_id
+        - name: cache_uuid
           in: path
-          description: ID of notification
+          description: statistics cache identifier
           required: true
           schema:
             type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
+        - name: status
+          in: query
+          description: job status
+          required: true
+          schema:
+            type: string
+        - name: event
+          in: query
+          description: job notification event
+          required: true
+          schema:
+            type: string
+        - name: error
+          in: query
+          description: job error
+          required: true
+          schema:
+            type: string
       responses:
         '200':
           $ref: '#/components/responses/error_response'

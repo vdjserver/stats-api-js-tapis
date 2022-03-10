@@ -167,7 +167,7 @@ ServiceAccount.getToken()
                 delete_stats_cache_study: statsController.clearStudyCache,
                 update_stats_cache_repertoire: statsController.updateStatisticsCacheForRepertoire,
                 delete_stats_cache_repertoire: statsController.clearRepertoireCache,
-                stats_notify: apiResponseController.notImplemented
+                stats_notify: statsController.statsNotify
             }
         });
 

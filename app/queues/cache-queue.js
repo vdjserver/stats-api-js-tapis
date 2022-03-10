@@ -250,12 +250,23 @@ createQueue.process(async (job) => {
         config.log.info(context, cached_studies.length + ' statistics cache study entries for repository: ' + repository_id, true);
 
         // create study cache entries if necessary
+        var cleared_studies = [];
         for (let i in cached_studies) {
             let study_id = cached_studies[i]['value']['study_id'];
-            //console.log(study_id);
-            // TODO: we should check if an existing study has been updated
-            if (stats_studies_dict[study_id]) continue;
-            
+
+            // entry exists?
+            if (stats_studies_dict[study_id]) {
+                // if download_cache_id is different, that means the study was updated
+                // so throw away the statistics and they will get recalculated
+                if (stats_studies_dict[study_id]['value']['download_cache_id'] != cached_studies[i]['uuid']) {
+                    config.log.info(context, 'download cache: ' + stats_studies_dict[study_id]['value']['download_cache_id']
+                                    + ' is no longer valid, clearing statistics cache: ' + stats_studies_dict[study_id]['uuid'], true);
+                    CacheQueue.triggerClearCache(stats_studies_dict[study_id]['uuid']);
+                    cleared_studies.push(study_id);
+                }
+                continue;
+            }
+
             // insert cache entry
             config.log.info(context, 'ADC study to be cached: ' + study_id, true);
             let cache_entry = await tapisIO.createStatisticsCacheStudyMetadata(repository_id, study_id, cached_studies[i]['uuid'], false)
@@ -286,6 +297,7 @@ createQueue.process(async (job) => {
             if (! stats_studies[i]['value']['should_cache']) continue;
             if (stats_studies[i]['value']['is_cached']) continue;
             let study_id = stats_studies[i]['value']['study_id'];
+            if (cleared_studies.indexOf(study_id) >= 0) continue; // skip if has not been completely cleared
 
             config.log.info(context, 'Create/Update statistics cache repertoire entries for study: ' + study_id + ' cache_uuid: ' + stats_studies[i]['uuid'], true);
 
@@ -430,7 +442,7 @@ CacheQueue.pollJobs = async function() {
     }
 
     config.log.info(context, 'end');
-    return Promise.resolve();
+    return Promise.resolve(with_jobs.length);
 }
 
 // this should run periodically to check if statistics jobs are to be submitted
@@ -452,17 +464,38 @@ checkQueue.process(async (job) => {
     stats_cache = stats_cache[0];
 
     // verify cache is enabled
+    var createJob = false;
     if (!stats_cache['value']['enable_cache']) {
         config.log.info(context, 'Statistics cache is not enabled', true);
     } else {
         // check if jobs are submitted
         if (stats_cache['value']['jobs_submitted']) {
             config.log.info(context, 'Statistics jobs are already submitted', true);
-            await CacheQueue.pollJobs();
-        } else {
-            config.log.info(context, 'Statistics jobs are not submitted, submit job queue', true);
-            jobQueue.add({stats_cache: stats_cache});
-        }
+            var num_jobs = await CacheQueue.pollJobs();
+
+            // reload
+            stats_cache = await tapisIO.getStatisticsCache()
+                .catch(function(error) {
+                    msg = config.log.error(context, 'error' + error);
+                });
+            if (msg) {
+                webhookIO.postToSlack(msg);
+                return Promise.resolve();
+            }
+            stats_cache = stats_cache[0];
+
+            // if no jobs then submit
+            if (! stats_cache['value']['jobs_submitted']) createJob = true;
+
+            // if number of jobs is less than max
+            if ((num_jobs != null) && (num_jobs < config.statistics_max_jobs)) createJob = true;
+
+        } else createJob = true;
+    }
+
+    if (createJob) {
+        config.log.info(context, 'Statistics jobs are not submitted, submit job queue', true);
+        jobQueue.add({stats_cache: stats_cache});
     }
 
     config.log.info(context, 'end');
@@ -478,7 +511,7 @@ CacheQueue.createJob = function(uuid, download_cache_id, repertoire_id, maxHours
     // TODO: should have similar environment_config.js that GUI uses
     var notify = {
         url: tapisSettings.notifyHost
-            + '/irplus/v1/stats/notify/' + uuid
+            + '/irplus/v1/stats/cache/notify/' + uuid
             + '?status=${JOB_STATUS}'
             + '&event=${EVENT}'
             + '&error=${JOB_ERROR}',
@@ -554,6 +587,9 @@ jobQueue.process(async (job) => {
             let repository_id = entry['value']['repository_id'];
             let study_id = entry['value']['study_id'];
             let repertoire_id = entry['value']['repertoire_id'];
+
+            // if job already assigned the skip
+            if (entry['value']['statistics_job_id']) continue;
 
             // get the statistics cache study entry
             var stats_study = await tapisIO.getStatisticsCacheStudyMetadata(repository_id, study_id)
@@ -659,6 +695,12 @@ finishQueue.process(async (job) => {
 
     if (! entry) {
         msg = config.log.error(context, 'could not retrieve cache entry: ' + cache_uuid);
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    if (entry['value']['is_cached']) {
+        msg = config.log.error(context, 'already cached, duplicate finish for cache entry: ' + cache_uuid);
         webhookIO.postToSlack(msg);
         return Promise.resolve();
     }
@@ -1032,13 +1074,13 @@ clearQueue.process(async (job) => {
             }
         }
 
-        // update the study entries
+        // delete the study entries
         for (let i in stats_studies) {
             let stats_study = stats_studies[i];
-            stats_study['value']['is_cached'] = false;
-            await tapisIO.updateMetadata(stats_study['uuid'], stats_study['name'], stats_study['value'], null)
+
+            await tapisIO.deleteMetadata(ServiceAccount.accessToken(), stats_study['uuid'])
                 .catch(function(error) {
-                    msg = config.log.error(context, 'error' + error);
+                    msg = config.log.error(context, 'tapisIO.deleteMetadata: ' + stats_study['uuid'] + ', error ' + error);
                 });
             if (msg) {
                 webhookIO.postToSlack(msg);
