@@ -47,6 +47,7 @@ var checkQueue = new Queue('Statistics cache check');
 var jobQueue = new Queue('Statistics cache job');
 var finishQueue = new Queue('Statistics cache finish');
 var clearQueue = new Queue('Statistics cache clear');
+var reloadQueue = new Queue('Statistics cache reload');
 
 CacheQueue.clearQueues = async function(queue) {
     var context = 'CacheQueue.clearQueues';
@@ -777,7 +778,7 @@ finishQueue.process(async (job) => {
                 // increase the time multiplier
                 var timeMultiplier = entry['value']['timeMultiplier'];
                 if (! timeMultiplier) timeMultiplier = 1;
-                timeMultiplier *= 2;
+                timeMultiplier *= config.statistics_time_multiplier;
 
                 msg = config.log.error(context, 'Retry statistics job with time multiplier: ' + timeMultiplier);
                 webhookIO.postToSlack(msg);
@@ -870,8 +871,13 @@ finishQueue.process(async (job) => {
         return Promise.resolve();
     }
 
+    // re-organize the data
+    var new_data = { repertoire: data['repertoire'] };
+    for (let i in data['statistics'])
+        new_data[data['statistics'][i]['statistic_name']] = data['statistics'][i];
+
     // save the statistics
-    await tapisIO.recordStatistics(collection, data)
+    await tapisIO.recordStatistics(collection, new_data)
         .catch(function(error) {
             msg = config.log.error(context, 'error' + error);
         });
@@ -1092,3 +1098,158 @@ clearQueue.process(async (job) => {
     config.log.info(context, 'complete');
     return Promise.resolve();
 });
+
+//
+// Reload the statistics into the database
+// without running new jobs
+//
+CacheQueue.triggerReloadCache = function(cache_uuid) {
+    var context = 'CacheQueue.triggerReloadCache';
+    config.log.info(context, 'start');
+    reloadQueue.add({ cache_uuid:cache_uuid });
+}
+
+reloadQueue.process(async (job) => {
+    var context = 'reloadQueue';
+    var msg = null;
+    var cache_uuid = job['data']['cache_uuid'];
+    var collection = 'statistics' + tapisSettings.mongo_queryCollection;
+
+    config.log.info(context, 'start');
+
+    // get cache entry
+    var metadata = await tapisIO.getMetadata(cache_uuid)
+        .catch(function(error) {
+            msg = config.log.error(context, 'Could not get metadata id: ' + cache_uuid + ', error: ' + error);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    var repository_id = metadata['value']['repository_id'];
+    var study_id = metadata['value']['study_id'];
+    var repertoire_id = null;
+    if (metadata['name'] == 'statistics_cache_study') {
+        // reload study cache
+        config.log.info(context, 'reload statistics cache for repository: ' + repository_id + ' and study: ' + study_id);
+    } else if (metadata['name'] == 'statistics_cache_repertoire') {
+        // reload repertoire cache
+        repertoire_id = metadata['value']['repertoire_id'];
+        config.log.info(context, 'reload statistics cache for repository: ' + repository_id + ' and study: ' + study_id
+            + ' and repertoire: ' + repertoire_id);
+    } else {
+        msg = config.log.error(context, 'Metadata id: ' + cache_uuid + ' is not statistics_cache_study or statistics_cache_repertoire');
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    // get the statistics cache study entries
+    var stats_studies = await tapisIO.getStatisticsCacheStudyMetadata(repository_id, study_id)
+        .catch(function(error) {
+            msg = config.log.error(context, 'error' + error);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    config.log.info(context, stats_studies.length + ' statistics cache study entries to be reloaded.', true);
+
+    // get statistics cache repertoire entries
+    let stats_entries = await tapisIO.getStatisticsCacheRepertoireMetadata(repository_id, study_id, repertoire_id)
+        .catch(function(error) {
+            msg = config.log.error(context, 'error' + error);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    config.log.info(context, stats_entries.length + ' statistics cache repertoires entries to be reloaded.', true);
+
+    // get service token
+    await ServiceAccount.getToken()
+        .catch(function(error) {
+            msg = config.log.error(context, 'error' + error);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return Promise.resolve();
+    }
+
+    if (repertoire_id) {
+        // reload statistics for one repertoire
+        if (!stats_studies || stats_studies.length != 1) {
+            msg = config.log.error(context, 'Incorrect number (!= 1) of statistics cache entries for study: ' + study_id);
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+        let stats_study = stats_studies[0];
+        let download_cache_id = stats_study['value']['download_cache_id'];
+
+        if (!stats_entries || stats_entries.length != 1) {
+            msg = config.log.error(context, 'Incorrect number (!= 1) of statistics cache repertoire entries for repertoire: ' + repertoire_id);
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+        let entry = stats_entries[0];
+
+        // udpate the repertoire entry
+        entry['value']['is_cached'] = false;
+        await tapisIO.updateMetadata(entry['uuid'], entry['name'], entry['value'], null)
+            .catch(function(error) {
+                msg = config.log.error(context, 'tapisIO.deleteMetadata: ' + entry['uuid'] + ', error ' + error);
+            });
+        if (msg) {
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+
+        // update study entry
+        stats_study['value']['is_cached'] = false;
+        await tapisIO.updateMetadata(stats_study['uuid'], stats_study['name'], stats_study['value'], null)
+            .catch(function(error) {
+                msg = config.log.error(context, 'error' + error);
+            });
+        if (msg) {
+            webhookIO.postToSlack(msg);
+            return Promise.resolve();
+        }
+    } else {
+        // reload for one or more studies
+        for (let i in stats_entries) {
+            let entry = stats_entries[i];
+
+            // udpate the repertoire entry
+            entry['value']['is_cached'] = false;
+            await tapisIO.updateMetadata(entry['uuid'], entry['name'], entry['value'], null)
+                .catch(function(error) {
+                    msg = config.log.error(context, 'tapisIO.deleteMetadata: ' + entry['uuid'] + ', error ' + error);
+                });
+            if (msg) {
+                webhookIO.postToSlack(msg);
+                return Promise.resolve();
+            }
+        }
+
+        // update the study entries
+        for (let i in stats_studies) {
+            let stats_study = stats_studies[i];
+
+            stats_study['value']['is_cached'] = false;
+            await tapisIO.updateMetadata(stats_study['uuid'], stats_study['name'], stats_study['value'], null)
+                .catch(function(error) {
+                    msg = config.log.error(context, 'error' + error);
+                });
+            if (msg) {
+                webhookIO.postToSlack(msg);
+                return Promise.resolve();
+            }
+        }
+    }
+
+    config.log.info(context, 'complete');
+    return Promise.resolve();
+});
+

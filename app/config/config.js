@@ -47,6 +47,7 @@ config.enable_cache = parseBoolean(process.env.STATS_API_ENABLE_CACHE);
 config.statistics_app = process.env.STATS_TAPIS_APP
 config.statistics_app_queue = process.env.STATS_TAPIS_APP_QUEUE
 config.statistics_max_jobs = process.env.STATS_MAX_JOBS
+config.statistics_time_multiplier = process.env.STATS_TIME_MULTIPLIER
 config.name = 'VDJ-STATS-API';
 
 // Host user and group
@@ -54,6 +55,9 @@ config.hostServiceAccount = process.env.HOST_SERVICE_ACCOUNT;
 config.hostServiceGroup = process.env.HOST_SERVICE_GROUP;
 config.vdjserver_data_path = process.env.VDJSERVER_DATA_PATH;
 config.lrqdata_path = process.env.LRQDATA_PATH;
+
+// Error/debug reporting
+config.debug = parseBoolean(process.env.DEBUG_CONSOLE);
 
 // standard info/error reporting
 config.log = {};
@@ -75,10 +79,7 @@ config.log.error = function(context, msg) {
 // AIRR Data Commons
 config.adcRepositoryEntry = process.env.ADC_REPOSITORY_ENTRY;
 if (! config.adcRepositoryEntry) config.adcRepositoryEntry = 'adc';
-console.log('VDJ-API INFO: adc_system_repositories entry =', config.adcRepositoryEntry);
-
-// Error/debug reporting
-config.debug = parseBoolean(process.env.DEBUG_CONSOLE);
+config.log.info('config', 'adc_system_repositories entry = ' + config.adcRepositoryEntry, true);
 
 // get service info
 var packageFile = fs.readFileSync(path.resolve(__dirname, '../../package.json'), 'utf8');

@@ -41,51 +41,187 @@ var statisticsQueue = require('../queues/cache-queue');
 // Processing
 var tapisIO = require('vdj-tapis-js');
 var ServiceAccount = tapisIO.serviceAccount;
+var tapisSettings = tapisIO.tapisSettings;
 var webhookIO = require('../vendor/webhookIO');
 
 // rearrangement counts
 StatisticsController.RearrangementCount = async function(request, response) {
-    if (config.debug) console.log("VDJ-STATS-API INFO: StatisticsController.RearrangementCount");
-    console.log(request.body);
+    var context = 'StatisticsController.RearrangementCount';
+    var msg = null;
 
-    return apiResponseController.notImplemented(request, response);
-/*
-    const client = new MongoClient(url);
-    try {
-        await client.connect();
-        if (config.debug) console.log("VDJ-STATS-API INFO: Connected successfully to mongo");
+    var repertoire_list = request.body.repertoires;
+    var statistics_list = request.body.statistics;
+    var collection = 'statistics' + tapisSettings.mongo_queryCollection;
 
-        var v1airr = client.db(mongoSettings.dbname);
-        var collection = await v1airr.collection('rearrangement');
+    if (! statistics_list) return response.status(200).json({ Info: config.info, Result: [] });
+    if (statistics_list.length == 0) return response.status(200).json({ Info: config.info, Result: [] });
 
-        console.log(request.body.repertoires);
-        if ((!request.body.repertoires) || (request.body.repertoires.length == 0)) {
-            // empty array means total count
-            console.log('all');
-            var result = await collection.estimatedDocumentCount();
-            console.log(result);
-            apiResponseController.sendSuccess({"total_count":result}, response);
-        } else {
-            // otherwise get count for each repertoire
-            console.log('list');
-            var total_count = 0;
-            var rearrangement_count = {};
-            var query = {};
-            for (var i = 0; i < request.body.repertoires.length; ++i) {
-                query['repertoire_id'] = request.body.repertoires[i];
-                console.log(query);
-                var result = await collection.countDocuments(query);
-                console.log(result);
-                rearrangement_count[request.body.repertoires[i]] = result;
-                total_count += result;
-            }
-            apiResponseController.sendSuccess({"total_count":total_count,"counts":rearrangement_count}, response);
-        }
-    } catch (err) {
-        console.error("VDJ-STATS-API ERROR: Could not connect to database");
-        return apiResponseController.sendError("Internal Error", 500, response);
+    // construct query
+    // TODO: ignoring data_processing_id and sample_processing_id
+    var filter = null;
+    var id_list = [];
+    if (repertoire_list) {
+        for (let i in repertoire_list)
+            if (repertoire_list[i]['repertoire'])
+                if (repertoire_list[i]['repertoire']['repertoire_id'])
+                    id_list.push(repertoire_list[i]['repertoire']['repertoire_id']);
     }
-    client.close(); */
+    // an empty repertoire list implies all repertoires
+    if (id_list.length > 0) {
+        filter = { 'repertoire.repertoire_id': { '$in': id_list }};
+    }
+    var query = null;
+    if (filter) query = JSON.stringify(filter);
+    config.log.info(context, 'Query is: ' + query);
+
+    var projection = {};
+    projection['repertoire'] = 1;
+    projection['_id'] = 0;
+    if (statistics_list)
+        for (let i in statistics_list) projection[statistics_list[i]] = 1;
+
+    // get the statistics
+    var records = await tapisIO.performMultiQuery(collection, query, projection, 1, tapisSettings.max_size)
+        .catch(function(error) {
+            msg = config.log.error(context, 'Error' + error);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return response.status(500).json({"message":msg});
+    }
+
+    // reformat the response
+    var results = [];
+    for (let i in records) {
+        let entry = { repertoire: records[i]['repertoire'], statistics: [] };
+        for (let j in statistics_list) {
+            if (records[i][statistics_list[j]])
+                entry['statistics'].push(records[i][statistics_list[j]]);
+        }
+        results.push(entry);
+    }
+
+    return response.status(200).json({ Info: config.info, Result: results });
+};
+
+// rearrangement junction lengths
+StatisticsController.RearrangementJunctionLength = async function(request, response) {
+    var context = 'StatisticsController.RearrangementJunctionLength';
+    var msg = null;
+
+    var repertoire_list = request.body.repertoires;
+    var statistics_list = request.body.statistics;
+    var collection = 'statistics' + tapisSettings.mongo_queryCollection;
+
+    if (! statistics_list) return response.status(200).json({ Info: config.info, Result: [] });
+    if (statistics_list.length == 0) return response.status(200).json({ Info: config.info, Result: [] });
+
+    // construct query
+    // TODO: ignoring data_processing_id and sample_processing_id
+    var filter = null;
+    var id_list = [];
+    if (repertoire_list) {
+        for (let i in repertoire_list)
+            if (repertoire_list[i]['repertoire'])
+                if (repertoire_list[i]['repertoire']['repertoire_id'])
+                    id_list.push(repertoire_list[i]['repertoire']['repertoire_id']);
+    }
+    // an empty repertoire list implies all repertoires
+    if (id_list.length > 0) {
+        filter = { 'repertoire.repertoire_id': { '$in': id_list }};
+    }
+    var query = null;
+    if (filter) query = JSON.stringify(filter);
+    config.log.info(context, 'Query is: ' + query);
+
+    var projection = {};
+    projection['repertoire'] = 1;
+    projection['_id'] = 0;
+    if (statistics_list)
+        for (let i in statistics_list) projection[statistics_list[i]] = 1;
+
+    // get the statistics
+    var records = await tapisIO.performMultiQuery(collection, query, projection, 1, tapisSettings.max_size)
+        .catch(function(error) {
+            msg = config.log.error(context, 'Error' + error);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return response.status(500).json({"message":msg});
+    }
+
+    // reformat the response
+    var results = [];
+    for (let i in records) {
+        let entry = { repertoire: records[i]['repertoire'], statistics: [] };
+        for (let j in statistics_list) {
+            if (records[i][statistics_list[j]])
+                entry['statistics'].push(records[i][statistics_list[j]]);
+        }
+        results.push(entry);
+    }
+
+    return response.status(200).json({ Info: config.info, Result: results });
+};
+
+// rearrangement gene usage
+StatisticsController.RearrangementGeneUsage = async function(request, response) {
+    var context = 'StatisticsController.RearrangementGeneUsage';
+    var msg = null;
+
+    var repertoire_list = request.body.repertoires;
+    var statistics_list = request.body.statistics;
+    var collection = 'statistics' + tapisSettings.mongo_queryCollection;
+
+    if (! statistics_list) return response.status(200).json({ Info: config.info, Result: [] });
+    if (statistics_list.length == 0) return response.status(200).json({ Info: config.info, Result: [] });
+
+    // construct query
+    // TODO: ignoring data_processing_id and sample_processing_id
+    var filter = null;
+    var id_list = [];
+    if (repertoire_list) {
+        for (let i in repertoire_list)
+            if (repertoire_list[i]['repertoire'])
+                if (repertoire_list[i]['repertoire']['repertoire_id'])
+                    id_list.push(repertoire_list[i]['repertoire']['repertoire_id']);
+    }
+    // an empty repertoire list implies all repertoires
+    if (id_list.length > 0) {
+        filter = { 'repertoire.repertoire_id': { '$in': id_list }};
+    }
+    var query = null;
+    if (filter) query = JSON.stringify(filter);
+    config.log.info(context, 'Query is: ' + query);
+
+    var projection = {};
+    projection['repertoire'] = 1;
+    projection['_id'] = 0;
+    if (statistics_list)
+        for (let i in statistics_list) projection[statistics_list[i]] = 1;
+
+    // get the statistics
+    var records = await tapisIO.performMultiQuery(collection, query, projection, 1, tapisSettings.max_size)
+        .catch(function(error) {
+            msg = config.log.error(context, 'Error' + error);
+        });
+    if (msg) {
+        webhookIO.postToSlack(msg);
+        return response.status(500).json({"message":msg});
+    }
+
+    // reformat the response
+    var results = [];
+    for (let i in records) {
+        let entry = { repertoire: records[i]['repertoire'], statistics: [] };
+        for (let j in statistics_list) {
+            if (records[i][statistics_list[j]])
+                entry['statistics'].push(records[i][statistics_list[j]]);
+        }
+        results.push(entry);
+    }
+
+    return response.status(200).json({ Info: config.info, Result: results });
 };
 
 // clone counts
@@ -206,8 +342,10 @@ StatisticsController.getStatisticsCacheStudyList = async function(request, respo
 StatisticsController.updateStatisticsCacheForStudy = async function(request, response) {
     var context = 'StatisticsController.updateStatisticsCacheForStudy';
     var msg = null;
-    var should_cache = request.body.should_cache;
+
     var cache_uuid = request.params.cache_uuid;
+    var should_cache = request.body.should_cache;
+    var reload = request.body.reload;
 
     config.log.info(context, 'Update statistics study cache with cache uuid: ' + cache_uuid);
 
@@ -244,6 +382,9 @@ StatisticsController.updateStatisticsCacheForStudy = async function(request, res
         webhookIO.postToSlack(msg);
         return response.status(500).json({"message":msg});
     }
+
+    // trigger reload if requested
+    if (reload) statisticsQueue.triggerReloadCache(metadata['uuid']);
 
     response.status(200).json({"message":"Updated."});
 };

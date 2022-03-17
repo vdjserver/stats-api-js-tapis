@@ -73,6 +73,9 @@ paths:
               properties:
                 should_cache:
                   type: boolean
+                reload:
+                  type: boolean
+                  default: false
       responses:
         '200':
           $ref: '#/components/responses/error_response'

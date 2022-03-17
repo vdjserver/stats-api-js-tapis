@@ -153,8 +153,8 @@ ServiceAccount.getToken()
                 get_service_info: apiResponseController.getInfo,
 
                 rearrangement_count: statsController.RearrangementCount,
-                rearrangement_junction_length: apiResponseController.notImplemented,
-                rearrangement_gene_usage: apiResponseController.notImplemented,
+                rearrangement_junction_length: statsController.RearrangementJunctionLength,
+                rearrangement_gene_usage: statsController.RearrangementGeneUsage,
 
                 clone_count: statsController.CloneCount,
                 clone_junction_length: apiResponseController.notImplemented,
