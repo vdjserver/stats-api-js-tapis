@@ -137,7 +137,8 @@ ServiceAccount.getToken()
                 console.log('Got an error!');
                 console.log(JSON.stringify(err));
                 console.trace("Here I am!");
-                res.status(500).json(err.errors);
+                if (err.status) res.status(err.status).json(err.errors);
+                else res.status(500).json(err.errors);
             },
             consumesMiddleware: {
                 'application/json': bodyParser.json()
