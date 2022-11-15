@@ -1,0 +1,8 @@
+{
+    "statistics":[
+        "junction_aa_length",
+        "junction_length",
+        "junction_aa_length_productive",
+        "junction_length_productive"
+    ]
+}

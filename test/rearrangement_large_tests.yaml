@@ -1,0 +1,76 @@
+
+- name: fail_bad_repertoires_1.json
+  data: fail_bad_repertoires_1.json
+  endpoint: /rearrangement/count
+  code: 404
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: data_processing.data_processing_id
+
+- name: pass_all_rearrangement_count_1.json
+  data: pass_all_rearrangement_count_1.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Facet: subject.diagnosis.disease_diagnosis.id
+
+# empty statistics array so empty result
+- name: pass_rearrangement_count_1.json
+  data: pass_rearrangement_count_1.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: "[]"
+
+# single valid repertoire, some stats
+- name: pass_rearrangement_count_2.json
+  data: pass_rearrangement_count_2.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: []
+
+# multiple repertoires, some stats
+- name: pass_rearrangement_count_3.json
+  data: pass_rearrangement_count_3.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: []
+
+# single valid repertoire, all stats
+- name: pass_rearrangement_count_4.json
+  data: pass_rearrangement_count_4.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: []
+
+# multiple repertoires, all stats
+- name: pass_rearrangement_count_5.json
+  data: pass_rearrangement_count_5.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: []
+

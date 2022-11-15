@@ -1,0 +1,8 @@
+{
+    "statistics":[
+        "duplicate_count",
+        "duplicate_count_productive",
+        "rearrangement_count",
+        "rearrangement_count_productive"
+    ]
+}

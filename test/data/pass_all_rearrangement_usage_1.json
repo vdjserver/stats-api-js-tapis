@@ -1,0 +1,8 @@
+{
+    "statistics":[
+        "v_call_exists",
+        "v_call_unique",
+        "v_gene_exists",
+        "v_gene_unique"
+    ]
+}

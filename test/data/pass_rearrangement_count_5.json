@@ -1,0 +1,22 @@
+{
+    "repertoires":[
+        {
+            "repertoire":
+                {"repertoire_id":"2930240685395481066-242ac113-0001-012"}
+        },
+        {
+            "repertoire":
+                {"repertoire_id":"9199329974484397590-242ac113-0001-012"}
+        },
+        {
+            "repertoire":
+                {"repertoire_id":"7509560991219117590-242ac113-0001-012"}
+        }
+    ],
+    "statistics":[
+        "duplicate_count",
+        "duplicate_count_productive",
+        "rearrangement_count",
+        "rearrangement_count_productive"
+    ]
+}

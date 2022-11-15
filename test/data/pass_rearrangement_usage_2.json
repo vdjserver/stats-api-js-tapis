@@ -1,0 +1,13 @@
+{
+    "repertoires":[
+        {
+            "repertoire":
+                {"repertoire_id":"684559928821354986-242ac113-0001-012"}
+        }
+    ],
+    "statistics":[
+        "v_subgroup_exists_productive",
+        "v_gene_exists_productive",
+        "v_call_exists_productive"
+    ]
+}

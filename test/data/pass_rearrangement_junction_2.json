@@ -1,0 +1,12 @@
+{
+    "repertoires":[
+        {
+            "repertoire":
+                {"repertoire_id":"2930240685395481066-242ac113-0001-012"}
+        }
+    ],
+    "statistics":[
+        "junction_aa_length",
+        "junction_aa_length_productive"
+    ]
+}

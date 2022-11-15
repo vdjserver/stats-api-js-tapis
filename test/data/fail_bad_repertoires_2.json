@@ -1,0 +1,8 @@
+{
+    "repertoires": [ 
+        { "foo":"bar"}
+    ],
+    "statistics":[
+        "duplicate_count_productive"
+    ]
+}

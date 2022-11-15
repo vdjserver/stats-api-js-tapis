@@ -1,0 +1,267 @@
+
+- name: fail_bad_repertoires_1.json
+  data: fail_bad_repertoires_1.json
+  endpoint: /rearrangement/count
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: repertoires
+    errorCode: type.openapi.requestValidation
+    message: should be array
+    location: body
+
+# extraneous key/value pairs are ignored?
+- name: fail_bad_repertoires_2.json
+  data: fail_bad_repertoires_2.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: duplicate_count_productive
+
+- name: fail_bad_repertoires_3.json
+  data: fail_bad_repertoires_3.json
+  endpoint: /rearrangement/count
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: repertoires[0]
+    errorCode: type.openapi.requestValidation
+    message: should be object
+    location: body
+
+# empty repertoires returns all or none?
+- name: fail_bad_repertoires_4.json
+  data: fail_bad_repertoires_4.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: duplicate_count_productive
+
+- name: fail_bad_repertoires_5.json
+  data: fail_bad_repertoires_5.json
+  endpoint: /rearrangement/count
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: repertoires[0]
+    errorCode: type.openapi.requestValidation
+    message: should be object
+    location: body
+
+- name: fail_bad_repertoires_6.json
+  data: fail_bad_repertoires_6.json
+  endpoint: /rearrangement/count
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: repertoires[0].repertoire.repertoire_id
+    errorCode: required.openapi.requestValidation
+    message: should have required property
+    location: body
+
+- name: fail_bad_statistics_1.json
+  data: fail_bad_statistics_1.json
+  endpoint: /rearrangement/count
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: statistics[0]
+    errorCode: enum.openapi.requestValidation
+    message: should be equal to one of the allowed values
+    location: body
+
+- name: fail_bad_statistics_2.json
+  data: fail_bad_statistics_2.json
+  endpoint: /rearrangement/count
+  code: 400
+  auth: false
+  response_type: list
+  response:
+    path: statistics
+    errorCode: type.openapi.requestValidation
+    message: should be array
+    location: body
+
+# empty statistics array so empty result
+- name: pass_rearrangement_count_1.json
+  data: pass_rearrangement_count_1.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+  records: 0
+
+# single valid repertoire, some stats
+- name: pass_rearrangement_count_2.json
+  data: pass_rearrangement_count_2.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+  records: 1
+
+# multiple repertoires, some stats
+- name: pass_rearrangement_count_3.json
+  data: pass_rearrangement_count_3.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+  records: 3
+
+# single valid repertoire, all stats
+- name: pass_rearrangement_count_4.json
+  data: pass_rearrangement_count_4.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+  records: 1
+
+# multiple repertoires, all stats
+- name: pass_rearrangement_count_5.json
+  data: pass_rearrangement_count_5.json
+  endpoint: /rearrangement/count
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+  records: 3
+
+# empty statistics array
+- name: pass_rearrangement_junction_1.json
+  data: pass_rearrangement_junction_1.json
+  endpoint: /rearrangement/junction_length
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+  records: 0
+
+# single valid repertoire, some stats
+- name: pass_rearrangement_junction_2.json
+  data: pass_rearrangement_junction_2.json
+  endpoint: /rearrangement/junction_length
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: junction_aa_length_productive
+  records: 1
+
+# multiple repertoires, some stats
+- name: pass_rearrangement_junction_3.json
+  data: pass_rearrangement_junction_3.json
+  endpoint: /rearrangement/junction_length
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: junction_aa_length_productive
+  records: 3
+
+# single valid repertoire, all stats
+- name: pass_rearrangement_junction_4.json
+  data: pass_rearrangement_junction_4.json
+  endpoint: /rearrangement/junction_length
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: junction_length_productive
+  records: 1
+
+# multiple repertoires, all stats
+- name: pass_rearrangement_junction_5.json
+  data: pass_rearrangement_junction_5.json
+  endpoint: /rearrangement/junction_length
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: junction_length_productive
+  records: 3
+
+# empty statistics array
+- name: pass_rearrangement_usage_1.json
+  data: pass_rearrangement_usage_1.json
+  endpoint: /rearrangement/junction_length
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+  records: 0
+
+# single valid repertoire, some stats
+- name: pass_rearrangement_usage_2.json
+  data: pass_rearrangement_usage_2.json
+  endpoint: /rearrangement/gene_usage
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: v_call_exists_productive
+  records: 1
+
+# multiple repertoires, some stats
+- name: pass_rearrangement_usage_3.json
+  data: pass_rearrangement_usage_3.json
+  endpoint: /rearrangement/gene_usage
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: v_call_exists_productive
+  records: 3
+
+# single valid repertoire, all stats
+- name: pass_rearrangement_usage_4.json
+  data: pass_rearrangement_usage_4.json
+  endpoint: /rearrangement/gene_usage
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: j_call_exists_productive
+  records: 1
+
+# multiple repertoires, all stats
+- name: pass_rearrangement_usage_5.json
+  data: pass_rearrangement_usage_5.json
+  endpoint: /rearrangement/gene_usage
+  code: 200
+  auth: false
+  response_type: dict
+  response:
+    Info: VDJServer Statistics API
+    Result: j_call_exists_productive
+  records: 3
