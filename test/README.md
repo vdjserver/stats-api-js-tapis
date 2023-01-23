@@ -1,7 +1,4 @@
-# VDJServer ADC API test suite
-
-This test suite does not replace the AIRR ADC API test suite. Those tests should be run
-in addition to these as they test much of the query parsing.
+# VDJServer STATS API test suite
 
 You can run the tests using the AIRR Standards docker image which has all of the
 necessary python libraries installed. You will need to map the local test suite
@@ -18,9 +15,10 @@ cd /work
 The tests are divided into a number of suites with individual tests specified in a YAML file.
 
 The python code can be run as follows against a local server:
+
 ```
 $ python3 test_driver.py http://localhost:8025/irplus/v1/stats rearrangement_statistics.yaml
-$ python3 test_driver.py http://localhost:8025/irplus/v1/stats cache_tests.yaml
+$ python3 test_driver.py http://localhost:8025/irplus/v1/stats rearrangement_large_tests.yaml
 ```
 
 Required command line options consist of:
