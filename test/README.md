@@ -19,8 +19,8 @@ The tests are divided into a number of suites with individual tests specified in
 
 The python code can be run as follows against a local server:
 ```
-$ python3 test_driver.py http://localhost:8025/irplus/stats/v1 rearrangement_statistics.yaml
-$ python3 test_driver.py http://localhost:8025/irplus/stats/v1 cache_tests.yaml
+$ python3 test_driver.py http://localhost:8025/irplus/v1/stats rearrangement_statistics.yaml
+$ python3 test_driver.py http://localhost:8025/irplus/v1/stats cache_tests.yaml
 ```
 
 Required command line options consist of:
