@@ -38,10 +38,17 @@ var apiResponseController = require('./apiResponseController');
 // Queues
 var statisticsQueue = require('../queues/cache-queue');
 
-// Processing
-var tapisIO = require('vdj-tapis-js');
-var ServiceAccount = tapisIO.serviceAccount;
+// Tapis
+var tapisV2 = require('vdj-tapis-js/tapis');
+var tapisV3 = require('vdj-tapis-js/tapisV3');
+var tapisIO = null;
+if (config.tapis_version == 2) tapisIO = tapisV2;
+if (config.tapis_version == 3) tapisIO = tapisV3;
 var tapisSettings = tapisIO.tapisSettings;
+var ServiceAccount = tapisIO.serviceAccount;
+var GuestAccount = tapisIO.guestAccount;
+
+// Processing
 var webhookIO = require('../vendor/webhookIO');
 
 // rearrangement counts
@@ -284,7 +291,7 @@ StatisticsController.updateStatisticsCacheStatus = async function(request, respo
         if (operation == 'trigger') value['enable_cache'] = true;
 
         // update
-        await tapisIO.updateMetadata(cache[0]['uuid'], cache[0]['name'], value, null)
+        await tapisIO.updateDocument(cache[0]['uuid'], cache[0]['name'], value)
             .catch(function(error) {
                 msg = config.log.error(context, 'Error while updating: ' + error);
             });
