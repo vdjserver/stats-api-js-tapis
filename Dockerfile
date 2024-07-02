@@ -10,9 +10,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && apt-get update && apt-get install -
     supervisor \
     wget \
     xz-utils \
-    git \
-    redis-server \
-    redis-tools
+    git
 
 ##################
 ##################
