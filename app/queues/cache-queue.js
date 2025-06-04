@@ -30,24 +30,29 @@ var CacheQueue = {};
 module.exports = CacheQueue;
 
 // App
-var tapisIO = require('vdj-tapis-js');
-var tapisSettings = tapisIO.tapisSettings;
-var ServiceAccount = tapisIO.serviceAccount;
-var webhookIO = require('../vendor/webhookIO');
-
-// Server environment config
+var app = require('../app');
 var config = require('../config/config');
 
+// Tapis
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis();
+var ServiceAccount = tapisIO.serviceAccount;
+var GuestAccount = tapisIO.guestAccount;
+var authController = tapisIO.authController;
+var webhookIO = require('vdj-tapis-js/webhookIO');
+
+// Processing
 var Queue = require('bull');
 var fs = require('fs');
 
-var triggerQueue = new Queue('Statistics cache trigger');
-var createQueue = new Queue('Statistics cache create');
-var checkQueue = new Queue('Statistics cache check');
-var jobQueue = new Queue('Statistics cache job');
-var finishQueue = new Queue('Statistics cache finish');
-var clearQueue = new Queue('Statistics cache clear');
-var reloadQueue = new Queue('Statistics cache reload');
+// Bull queues
+var triggerQueue = new Queue('Statistics cache trigger', { redis: app.redisConfig });
+var createQueue = new Queue('Statistics cache create', { redis: app.redisConfig });
+var checkQueue = new Queue('Statistics cache check', { redis: app.redisConfig });
+var jobQueue = new Queue('Statistics cache job', { redis: app.redisConfig });
+var finishQueue = new Queue('Statistics cache finish', { redis: app.redisConfig });
+var clearQueue = new Queue('Statistics cache clear', { redis: app.redisConfig });
+var reloadQueue = new Queue('Statistics cache reload', { redis: app.redisConfig });
 
 CacheQueue.clearQueues = async function(queue) {
     var context = 'CacheQueue.clearQueues';
@@ -121,10 +126,10 @@ CacheQueue.triggerCache = async function() {
     config.log.info(context, 'cache enabled, creating queue jobs', true);
 
     // submit to check every 3600secs/1hour
-    triggerQueue.add({stats_cache: stats_cache}, { repeat: { every: 3600000 }});
+    //triggerQueue.add({stats_cache: stats_cache}, { repeat: { every: 3600000 }});
 
     // testing, every 2 mins
-    //triggerQueue.add({stats_cache: stats_cache}, { repeat: { every: 120000 }});
+    triggerQueue.add({stats_cache: stats_cache}, { repeat: { every: 120000 }});
 
     // trigger the job queue
     // submit to check every 3600secs/1hour

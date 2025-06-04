@@ -42,19 +42,25 @@ function parseBoolean(value)
 }
 
 // General
-config.port = process.env.STATS_API_PORT;
-config.enable_cache = parseBoolean(process.env.STATS_API_ENABLE_CACHE);
-config.statistics_app = process.env.STATS_TAPIS_APP
-config.statistics_app_queue = process.env.STATS_TAPIS_APP_QUEUE
-config.statistics_max_jobs = process.env.STATS_MAX_JOBS
-config.statistics_time_multiplier = process.env.STATS_TIME_MULTIPLIER
 config.name = 'VDJ-STATS-API';
+config.port = process.env.STATS_API_PORT;
+config.tapis_version = process.env.TAPIS_VERSION;
 
 // Host user and group
 config.hostServiceAccount = process.env.HOST_SERVICE_ACCOUNT;
 config.hostServiceGroup = process.env.HOST_SERVICE_GROUP;
 config.vdjserver_data_path = process.env.VDJSERVER_DATA_PATH;
 config.lrqdata_path = process.env.LRQDATA_PATH;
+config.lrqdata_local_path = process.env.LRQDATA_LOCAL_PATH;
+
+// Queues
+config.redis_port = 6379;
+config.redis_host = 'vdjr-redis';
+config.enable_cache = parseBoolean(process.env.STATS_API_ENABLE_CACHE);
+config.statistics_app = process.env.STATS_TAPIS_APP;
+config.statistics_app_queue = process.env.STATS_TAPIS_APP_QUEUE;
+config.statistics_max_jobs = process.env.STATS_MAX_JOBS;
+config.statistics_time_multiplier = process.env.STATS_TIME_MULTIPLIER;
 
 // Error/debug reporting
 config.debug = parseBoolean(process.env.DEBUG_CONSOLE);
@@ -63,10 +69,12 @@ config.debug = parseBoolean(process.env.DEBUG_CONSOLE);
 config.log = {};
 config.log.info = function(context, msg, ignore_debug = false) {
     var date = new Date().toLocaleString('en-US', { timeZone: 'America/Chicago' });
+    var full_msg = date + ' - ' + config.name + ' INFO (' + context + '): ' + msg;
     if (ignore_debug)
-        console.log(date, '-', config.name, 'INFO (' + context + '):', msg);
+        console.log(full_msg);
     else
-        if (config.debug) console.log(date, '-', config.name, 'INFO (' + context + '):', msg);
+        if (config.debug) console.log(full_msg);
+    return full_msg;
 }
 
 config.log.error = function(context, msg) {
@@ -75,6 +83,7 @@ config.log.error = function(context, msg) {
     console.error(full_msg);
     return full_msg;
 }
+config.log.info('config', 'Debug console messages are enabled.', true);
 
 // AIRR Data Commons
 config.adcRepositoryEntry = process.env.ADC_REPOSITORY_ENTRY;

@@ -32,17 +32,19 @@ module.exports = StatisticsController;
 // Server config
 var config = require('../config/config');
 
+// Tapis
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis();
+var ServiceAccount = tapisIO.serviceAccount;
+var GuestAccount = tapisIO.guestAccount;
+var authController = tapisIO.authController;
+var webhookIO = require('vdj-tapis-js/webhookIO');
+
 // Controllers
 var apiResponseController = require('./apiResponseController');
 
 // Queues
 var statisticsQueue = require('../queues/cache-queue');
-
-// Processing
-var tapisIO = require('vdj-tapis-js');
-var ServiceAccount = tapisIO.serviceAccount;
-var tapisSettings = tapisIO.tapisSettings;
-var webhookIO = require('../vendor/webhookIO');
 
 // rearrangement counts
 StatisticsController.RearrangementCount = async function(request, response) {
@@ -70,9 +72,9 @@ StatisticsController.RearrangementCount = async function(request, response) {
     if (id_list.length > 0) {
         filter = { 'repertoire.repertoire_id': { '$in': id_list }};
     }
-    var query = null;
-    if (filter) query = JSON.stringify(filter);
-    config.log.info(context, 'Query is: ' + query);
+    //var query = null;
+    //if (filter) query = JSON.stringify(filter);
+    config.log.info(context, 'Query is: ' + JSON.stringify(filter));
 
     var projection = {};
     projection['repertoire'] = 1;
@@ -81,7 +83,7 @@ StatisticsController.RearrangementCount = async function(request, response) {
         for (let i in statistics_list) projection[statistics_list[i]] = 1;
 
     // get the statistics
-    var records = await tapisIO.performMultiQuery(collection, query, projection, 1, tapisSettings.max_size)
+    var records = await tapisIO.performMultiQuery(collection, filter, projection, 1, tapisSettings.max_size)
         .catch(function(error) {
             msg = config.log.error(context, 'Error' + error);
         });
@@ -130,9 +132,9 @@ StatisticsController.RearrangementJunctionLength = async function(request, respo
     if (id_list.length > 0) {
         filter = { 'repertoire.repertoire_id': { '$in': id_list }};
     }
-    var query = null;
-    if (filter) query = JSON.stringify(filter);
-    config.log.info(context, 'Query is: ' + query);
+    //var query = null;
+    //if (filter) query = JSON.stringify(filter);
+    config.log.info(context, 'Query is: ' + JSON.stringify(filter));
 
     var projection = {};
     projection['repertoire'] = 1;
@@ -141,7 +143,7 @@ StatisticsController.RearrangementJunctionLength = async function(request, respo
         for (let i in statistics_list) projection[statistics_list[i]] = 1;
 
     // get the statistics
-    var records = await tapisIO.performMultiQuery(collection, query, projection, 1, tapisSettings.max_size)
+    var records = await tapisIO.performMultiQuery(collection, filter, projection, 1, tapisSettings.max_size)
         .catch(function(error) {
             msg = config.log.error(context, 'Error' + error);
         });
@@ -190,9 +192,9 @@ StatisticsController.RearrangementGeneUsage = async function(request, response) 
     if (id_list.length > 0) {
         filter = { 'repertoire.repertoire_id': { '$in': id_list }};
     }
-    var query = null;
-    if (filter) query = JSON.stringify(filter);
-    config.log.info(context, 'Query is: ' + query);
+    //var query = null;
+    //if (filter) query = JSON.stringify(filter);
+    config.log.info(context, 'Query is: ' + JSON.stringify(filter));
 
     var projection = {};
     projection['repertoire'] = 1;
@@ -201,7 +203,7 @@ StatisticsController.RearrangementGeneUsage = async function(request, response) 
         for (let i in statistics_list) projection[statistics_list[i]] = 1;
 
     // get the statistics
-    var records = await tapisIO.performMultiQuery(collection, query, projection, 1, tapisSettings.max_size)
+    var records = await tapisIO.performMultiQuery(collection, filter, projection, 1, tapisSettings.max_size)
         .catch(function(error) {
             msg = config.log.error(context, 'Error' + error);
         });
@@ -284,7 +286,7 @@ StatisticsController.updateStatisticsCacheStatus = async function(request, respo
         if (operation == 'trigger') value['enable_cache'] = true;
 
         // update
-        await tapisIO.updateMetadata(cache[0]['uuid'], cache[0]['name'], value, null)
+        await tapisIO.updateDocument(cache[0]['uuid'], cache[0]['name'], value)
             .catch(function(error) {
                 msg = config.log.error(context, 'Error while updating: ' + error);
             });
