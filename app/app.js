@@ -42,7 +42,6 @@ var context = 'app';
 
 // Server environment config
 var config = require('./config/config');
-var webhookIO = require('./vendor/webhookIO');
 
 // CORS
 var allowCrossDomain = function(request, response, next) {
@@ -69,23 +68,31 @@ app.redisConfig = {
     host: 'vdjr-redis'
 };
 
-// Tapis
-if (config.tapis_version == 2) config.log.info(context, 'Using Tapis V2 API', true);
-else if (config.tapis_version == 3) config.log.info(context, 'Using Tapis V3 API', true);
-else {
-    config.log.error(context, 'Invalid Tapis version, check TAPIS_VERSION environment variable');
-    process.exit(1);
+// Downgrade to host vdj user
+// This is also so that the /vdjZ Corral file volume can be accessed,
+// as it is restricted to the TACC vdj account.
+// read/write access is required.
+if (config.hostServiceAccount) {
+    config.log.info(context, 'Downgrading to host user: ' + config.hostServiceAccount);
+    process.setgid(config.hostServiceGroup);
+    process.setuid(config.hostServiceAccount);
+    config.log.info(context, 'Current uid: ' + process.getuid());
+    config.log.info(context, 'Current gid: ' + process.getgid());
+} else {
+    config.log.info('WARNING', 'config.hostServiceAccount is not defined, Corral access will generate errors.');
 }
-var tapisV2 = require('vdj-tapis-js/tapis');
-var tapisV3 = require('vdj-tapis-js/tapisV3');
-var tapisIO = null;
-if (config.tapis_version == 2) tapisIO = tapisV2;
-if (config.tapis_version == 3) tapisIO = tapisV3;
-var tapisSettings = tapisIO.tapisSettings;
+
+// Tapis
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis(config);
 var ServiceAccount = tapisIO.serviceAccount;
 var GuestAccount = tapisIO.guestAccount;
 var authController = tapisIO.authController;
-tapisIO.authController.set_config(config);
+var webhookIO = require('vdj-tapis-js/webhookIO');
+
+// Mongo
+var mongoSettings = require('vdj-tapis-js/mongoSettings');
+mongoSettings.set_config(config);
 
 // Controllers
 var apiResponseController = require('./controllers/apiResponseController');
@@ -93,19 +100,6 @@ var statsController    = require('./controllers/statsController');
 
 // Queues
 var statisticsCacheQueue = require('./queues/cache-queue');
-
-// Downgrade to host vdj user
-// This is also so that the /vdjZ Corral file volume can be accessed,
-// as it is restricted to the TACC vdj account.
-// read/write access is required.
-config.log.info(context, 'Downgrading to host user: ' + config.hostServiceAccount, true);
-process.setgid(config.hostServiceGroup);
-process.setuid(config.hostServiceAccount);
-config.log.info(context, 'Current uid: ' + process.getuid(), true);
-config.log.info(context, 'Current gid: ' + process.getgid(), true);
-
-config.log.info(context, 'Using query collection: ' + tapisSettings.mongo_queryCollection, true);
-config.log.info(context, 'Using load collection: ' + tapisSettings.mongo_loadCollection, true);
 
 // Verify we can login with service and guest account
 ServiceAccount.getToken()
@@ -129,7 +123,7 @@ ServiceAccount.getToken()
         config.log.info(context, 'Loaded VDJServer Schema version ' + vdj_schema.get_info()['version']);
 
         // Connect schema to vdj-tapis
-        if (tapisIO == tapisV3) tapisV3.init_with_schema(vdj_schema);
+        tapisIO.init_with_schema(vdj_schema);
 
         // Load Stats API
         var apiFile = path.resolve(__dirname, '../specifications/stats-api.yaml');

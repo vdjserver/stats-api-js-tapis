@@ -31,17 +31,14 @@ module.exports = ApiResponseController;
 
 // Server config
 var config = require('../config/config');
-var webhookIO = require('../vendor/webhookIO');
 
 // Tapis
-var tapisV2 = require('vdj-tapis-js/tapis');
-var tapisV3 = require('vdj-tapis-js/tapisV3');
-var tapisIO = null;
-if (config.tapis_version == 2) tapisIO = tapisV2;
-if (config.tapis_version == 3) tapisIO = tapisV3;
-var tapisSettings = tapisIO.tapisSettings;
+var tapisSettings = require('vdj-tapis-js/tapisSettings');
+var tapisIO = tapisSettings.get_default_tapis();
 var ServiceAccount = tapisIO.serviceAccount;
 var GuestAccount = tapisIO.guestAccount;
+var authController = tapisIO.authController;
+var webhookIO = require('vdj-tapis-js/webhookIO');
 
 // service status
 ApiResponseController.confirmUpStatus = function(request, response) {

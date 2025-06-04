@@ -51,6 +51,7 @@ config.hostServiceAccount = process.env.HOST_SERVICE_ACCOUNT;
 config.hostServiceGroup = process.env.HOST_SERVICE_GROUP;
 config.vdjserver_data_path = process.env.VDJSERVER_DATA_PATH;
 config.lrqdata_path = process.env.LRQDATA_PATH;
+config.lrqdata_local_path = process.env.LRQDATA_LOCAL_PATH;
 
 // Queues
 config.redis_port = 6379;
